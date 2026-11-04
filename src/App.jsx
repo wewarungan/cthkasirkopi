@@ -10,6 +10,7 @@ import ReportsHistory from './components/ReportsHistory';
 import SettingsModal from './components/SettingsModal';
 import OpenTablesModal from './components/OpenTablesModal';
 import LoginModal from './components/LoginModal';
+import { useNotification } from './context/NotificationContext';
 
 import { 
   INITIAL_CATEGORIES, 
@@ -26,6 +27,8 @@ import {
 } from './services/googleSheets';
 
 export default function App() {
+  const { showToast, showAlert, showConfirm } = useNotification();
+
   // Navigation State
   const [activeTab, setActiveTab] = useState('pos'); // 'pos', 'reports', 'menu', 'settings'
 
@@ -259,17 +262,27 @@ export default function App() {
 
   const handleDeleteCategory = (categoryId) => {
     if (categoryId === 'all') {
-      alert('Kategori "Semua Menu" adalah kategori utama sistem dan tidak dapat dihapus.');
+      showAlert('Kategori Utama', 'Kategori "Semua Menu" adalah kategori bawaan sistem dan tidak dapat dihapus.', 'warning');
       return;
     }
     const count = products.filter(p => p.categoryId === categoryId).length;
     if (count > 0) {
-      const proceed = confirm(`Ada ${count} menu di kategori ini. Jika dihapus, menu tersebut akan dialihkan ke kategori lain. Lanjutkan hapus?`);
-      if (!proceed) return;
-      const fallbackCat = categories.find(c => c.id !== 'all' && c.id !== categoryId)?.id || 'es-kopi';
-      setProducts(prev => prev.map(p => p.categoryId === categoryId ? { ...p, categoryId: fallbackCat } : p));
+      showConfirm({
+        title: 'Hapus Kategori',
+        message: `Ada ${count} menu di kategori ini. Jika dihapus, menu tersebut akan dialihkan ke kategori lain. Lanjutkan hapus?`,
+        confirmText: 'Ya, Hapus',
+        type: 'danger',
+        onConfirm: () => {
+          const fallbackCat = categories.find(c => c.id !== 'all' && c.id !== categoryId)?.id || 'es-kopi';
+          setProducts(prev => prev.map(p => p.categoryId === categoryId ? { ...p, categoryId: fallbackCat } : p));
+          setCategories(prev => prev.filter(c => c.id !== categoryId));
+          showToast('Kategori berhasil dihapus', 'success');
+        }
+      });
+      return;
     }
     setCategories(prev => prev.filter(c => c.id !== categoryId));
+    showToast('Kategori berhasil dihapus', 'success');
   };
 
   // Transaction Deletion
@@ -304,7 +317,7 @@ export default function App() {
   // Open Table (Simpan Meja / Bayar Nanti)
   const handleSaveOpenTable = (orderData) => {
     if (!cartItems.length) {
-      alert('Pilih minimal satu menu sebelum menyimpan meja!');
+      showAlert('Keranjang Kosong', 'Pilih minimal satu menu sebelum menyimpan meja!', 'warning');
       return;
     }
     const now = new Date();
@@ -328,7 +341,7 @@ export default function App() {
     setOpenTables(prev => [newOpenTable, ...prev]);
     handleClearCart();
     setIsMobileCartOpen(false);
-    alert(`Pesanan untuk "${tableName}" berhasil disimpan ke Meja Aktif!`);
+    showToast(`Pesanan "${tableName}" berhasil disimpan ke Meja Aktif!`, 'success');
   };
 
   const handleLoadOpenTable = (tableOrder) => {
@@ -360,10 +373,11 @@ export default function App() {
 
   const handleDeleteUser = (userId) => {
     if (userId === currentUser?.id) {
-      alert('Anda tidak bisa menghapus akun yang sedang aktif digunakan!');
+      showAlert('Akses Dibatasi', 'Anda tidak bisa menghapus akun yang sedang aktif digunakan saat ini!', 'warning');
       return;
     }
     setUsers(prev => prev.filter(u => u.id !== userId));
+    showToast('Akun kasir berhasil dihapus', 'success');
   };
 
   const handleLoginSuccess = (user) => {
@@ -379,7 +393,7 @@ export default function App() {
     setTransactions([]);
     setCartItems([]);
     localStorage.clear();
-    alert('Data berhasil direset kembali ke setelan awal!');
+    showToast('Seluruh data berhasil direset kembali ke setelan awal!', 'success');
   };
 
   // Manual sync trigger

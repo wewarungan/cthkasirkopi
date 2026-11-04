@@ -1,5 +1,6 @@
 import React from 'react';
 import { Utensils, Clock, Trash2, ArrowRight, X, User } from 'lucide-react';
+import { useNotification } from '../context/NotificationContext';
 
 export default function OpenTablesModal({
   isOpen,
@@ -8,6 +9,7 @@ export default function OpenTablesModal({
   onLoadTable,
   onCancelTable,
 }) {
+  const { showConfirm, showToast } = useNotification();
   if (!isOpen) return null;
 
   const formatRupiah = (val) => {
@@ -99,9 +101,16 @@ export default function OpenTablesModal({
                     <button
                       type="button"
                       onClick={() => {
-                        if (confirm(`Yakin ingin membatalkan pesanan ${tbl.customerName || tbl.tableNumber}?`)) {
-                          onCancelTable(tbl.id);
-                        }
+                        showConfirm({
+                          title: 'Batalkan Pesanan Meja',
+                          message: `Yakin ingin membatalkan pesanan untuk "${tbl.customerName || tbl.tableNumber}"?`,
+                          confirmText: 'Ya, Batalkan',
+                          type: 'danger',
+                          onConfirm: () => {
+                            onCancelTable(tbl.id);
+                            showToast('Pesanan meja berhasil dibatalkan', 'info');
+                          }
+                        });
                       }}
                       className="text-stone-400 hover:text-rose-600 text-xs font-semibold flex items-center gap-1 transition-colors p-1"
                     >

@@ -4,6 +4,7 @@ import {
   Link, Upload, X, Layers, Tag, CupSoda, Flame, Milk, Cookie, Sparkles, PlusCircle, GlassWater
 } from 'lucide-react';
 import { formatDriveImageUrl } from '../services/defaultData';
+import { useNotification } from '../context/NotificationContext';
 
 const AVAILABLE_ICONS = [
   { id: 'Coffee', label: 'Kopi', component: Coffee },
@@ -26,6 +27,7 @@ export default function MenuManager({
   onSaveCategory,
   onDeleteCategory
 }) {
+  const { showToast, showAlert, showConfirm } = useNotification();
   const [activeSubTab, setActiveSubTab] = useState('products'); // 'products' or 'categories'
   
   // Product state
@@ -105,7 +107,7 @@ export default function MenuManager({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert('Ukuran file foto maksimal 2MB');
+        showAlert('Ukuran Foto Terlalu Besar', 'Ukuran file foto maksimal 2MB agar aplikasi tetap cepat dan ringan.', 'warning');
         return;
       }
       const reader = new FileReader();
@@ -126,7 +128,7 @@ export default function MenuManager({
   const handleProductSubmit = (e) => {
     e.preventDefault();
     if (!productForm.name.trim() || !productForm.price) {
-      alert('Nama menu dan harga jual wajib diisi!');
+      showAlert('Data Belum Lengkap', 'Nama menu dan harga jual wajib diisi!', 'warning');
       return;
     }
 
@@ -143,6 +145,7 @@ export default function MenuManager({
 
     onSaveProduct(payload);
     setIsProductModalOpen(false);
+    showToast(editingProduct ? 'Menu berhasil diperbarui' : 'Menu baru berhasil ditambahkan', 'success');
   };
 
   // --- Handlers for Categories ---
@@ -167,7 +170,7 @@ export default function MenuManager({
   const handleCategorySubmit = (e) => {
     e.preventDefault();
     if (!catForm.name.trim()) {
-      alert('Nama kategori tidak boleh kosong!');
+      showAlert('Data Belum Lengkap', 'Nama kategori tidak boleh kosong!', 'warning');
       return;
     }
 
@@ -183,6 +186,7 @@ export default function MenuManager({
 
     onSaveCategory(payload);
     setIsCatModalOpen(false);
+    showToast(editingCategory ? 'Kategori berhasil diperbarui' : 'Kategori baru berhasil ditambahkan', 'success');
   };
 
   const filteredProducts = products.filter(p => {
@@ -347,9 +351,16 @@ export default function MenuManager({
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm(`Yakin ingin menghapus menu "${product.name}"?`)) {
-                            onDeleteProduct(product.id);
-                          }
+                          showConfirm({
+                            title: 'Hapus Menu',
+                            message: `Yakin ingin menghapus menu "${product.name}"? Menu ini tidak akan muncul lagi di kasir.`,
+                            confirmText: 'Ya, Hapus',
+                            type: 'danger',
+                            onConfirm: () => {
+                              onDeleteProduct(product.id);
+                              showToast(`Menu "${product.name}" berhasil dihapus`, 'success');
+                            }
+                          });
                         }}
                         className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                         title="Hapus Menu"

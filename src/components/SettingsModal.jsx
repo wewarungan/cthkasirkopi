@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { formatDriveImageUrl } from '../services/defaultData';
 import { testGoogleScriptConnection } from '../services/googleSheets';
+import { useNotification } from '../context/NotificationContext';
 
 export default function SettingsModal({
   settings,
@@ -15,6 +16,7 @@ export default function SettingsModal({
   onSaveUser,
   onDeleteUser
 }) {
+  const { showToast, showAlert, showConfirm } = useNotification();
   const isOwner = currentUser?.role === 'owner';
 
   const [formData, setFormData] = useState({ ...settings });
@@ -36,7 +38,7 @@ export default function SettingsModal({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert('Ukuran file foto maksimal 2MB');
+        showAlert('Ukuran Foto Terlalu Besar', 'Ukuran file foto maksimal 2MB agar aplikasi tetap cepat.', 'warning');
         return;
       }
       const reader = new FileReader();
@@ -63,6 +65,7 @@ export default function SettingsModal({
     e.preventDefault();
     onSaveSettings(formData);
     setSavedNotification(true);
+    showToast('Pengaturan toko berhasil disimpan!', 'success');
     setTimeout(() => setSavedNotification(false), 2500);
   };
 
@@ -92,7 +95,7 @@ export default function SettingsModal({
   const handleUserSubmit = (e) => {
     e.preventDefault();
     if (!userFormData.name.trim() || !userFormData.pin.trim()) {
-      alert('Nama dan PIN wajib diisi!');
+      showAlert('Data Belum Lengkap', 'Nama dan PIN wajib diisi!', 'warning');
       return;
     }
 
@@ -106,6 +109,7 @@ export default function SettingsModal({
 
     onSaveUser(payload);
     setIsUserModalOpen(false);
+    showToast(editingUser ? `Data ${userFormData.name} diperbarui` : `Pengguna ${userFormData.name} ditambahkan`, 'success');
   };
 
   const qrisPreview = formatDriveImageUrl(formData.qrisImageUrl);
@@ -197,9 +201,15 @@ export default function SettingsModal({
                       <button
                         type="button"
                         onClick={() => {
-                          if (confirm(`Yakin ingin menghapus user kasir "${u.name}"?`)) {
-                            onDeleteUser(u.id);
-                          }
+                          showConfirm({
+                            title: 'Hapus Akun Pengguna',
+                            message: `Yakin ingin menghapus user kasir "${u.name}"?`,
+                            confirmText: 'Ya, Hapus',
+                            type: 'danger',
+                            onConfirm: () => {
+                              onDeleteUser(u.id);
+                            }
+                          });
                         }}
                         className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                         title="Hapus Kasir"
@@ -492,9 +502,15 @@ export default function SettingsModal({
             <button
               type="button"
               onClick={() => {
-                if (confirm('Yakin ingin mereset seluruh data kembali ke setelan awal pabrik?')) {
-                  onResetData();
-                }
+                showConfirm({
+                  title: 'Reset Semua Data',
+                  message: 'Yakin ingin mereset seluruh data kembali ke setelan awal pabrik? Seluruh transaksi, menu tambahan, dan histori akan kembali ke awal.',
+                  confirmText: 'Ya, Reset Semua',
+                  type: 'danger',
+                  onConfirm: () => {
+                    onResetData();
+                  }
+                });
               }}
               className="text-xs text-stone-400 hover:text-rose-600 underline font-medium"
             >

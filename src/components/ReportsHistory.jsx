@@ -4,6 +4,7 @@ import {
   Printer, Search, DollarSign, PieChart, ShieldAlert,
   Trash2, CheckSquare, Square, CheckCircle, AlertTriangle
 } from 'lucide-react';
+import { useNotification } from '../context/NotificationContext';
 
 export default function ReportsHistory({
   transactions,
@@ -13,6 +14,7 @@ export default function ReportsHistory({
   settings,
   currentUser,
 }) {
+  const { showToast, showConfirm } = useNotification();
   const isOwner = currentUser?.role === 'owner';
   const isAdmin = currentUser?.role === 'admin';
   const isKasir = currentUser?.role === 'kasir';
@@ -631,13 +633,18 @@ export default function ReportsHistory({
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm(`Yakin ingin menghapus ${selectedInvoices.length} transaksi yang dicentang? Data omset dan jumlah transaksi akan otomatis diperbarui.`)) {
-                    const count = selectedInvoices.length;
-                    onBulkDeleteTransactions(selectedInvoices);
-                    setSelectedInvoices([]);
-                    setToastMessage(`✅ ${count} Transaksi berhasil dihapus!`);
-                    setTimeout(() => setToastMessage(''), 3500);
-                  }
+                  showConfirm({
+                    title: 'Hapus Transaksi Terpilih',
+                    message: `Yakin ingin menghapus ${selectedInvoices.length} transaksi yang dicentang? Data omset dan jumlah transaksi akan otomatis diperbarui.`,
+                    confirmText: `Ya, Hapus (${selectedInvoices.length})`,
+                    type: 'danger',
+                    onConfirm: () => {
+                      const count = selectedInvoices.length;
+                      onBulkDeleteTransactions(selectedInvoices);
+                      setSelectedInvoices([]);
+                      showToast(`${count} transaksi berhasil dihapus!`, 'success');
+                    }
+                  });
                 }}
                 className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold flex items-center gap-1.5 shadow-xs transition-colors"
               >
@@ -727,12 +734,17 @@ export default function ReportsHistory({
                     <button
                       type="button"
                       onClick={() => {
-                        if (confirm(`Yakin ingin menghapus transaksi invoice ${tx.invoiceNumber} (${formatRupiah(tx.total)})? Data omset akan diperbarui.`)) {
-                          onDeleteTransaction(tx.invoiceNumber);
-                          setSelectedInvoices(prev => prev.filter(inv => inv !== tx.invoiceNumber));
-                          setToastMessage(`✅ Transaksi ${tx.invoiceNumber} berhasil dihapus!`);
-                          setTimeout(() => setToastMessage(''), 3500);
-                        }
+                        showConfirm({
+                          title: 'Hapus Transaksi',
+                          message: `Yakin ingin menghapus transaksi invoice ${tx.invoiceNumber} (${formatRupiah(tx.total)})? Data omset akan diperbarui.`,
+                          confirmText: 'Ya, Hapus',
+                          type: 'danger',
+                          onConfirm: () => {
+                            onDeleteTransaction(tx.invoiceNumber);
+                            setSelectedInvoices(prev => prev.filter(inv => inv !== tx.invoiceNumber));
+                            showToast(`Transaksi ${tx.invoiceNumber} berhasil dihapus!`, 'success');
+                          }
+                        });
                       }}
                       title="Hapus Transaksi Ini"
                       className="p-2 rounded-xl bg-white hover:bg-rose-50 text-stone-400 hover:text-rose-600 border border-stone-200 shadow-2xs transition-colors"

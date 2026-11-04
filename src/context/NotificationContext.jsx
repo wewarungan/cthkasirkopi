@@ -43,14 +43,25 @@ export function NotificationProvider({ children }) {
     });
   }, []);
 
-  const showConfirm = useCallback(({
-    title,
-    message,
-    confirmText = 'Ya, Lanjutkan',
-    cancelText = 'Batal',
-    type = 'danger',
-    onConfirm
-  }) => {
+  const showConfirm = useCallback((optionsOrTitle, messageParam, onConfirmParam) => {
+    let title, message, confirmText, cancelText, type, onConfirm;
+
+    if (typeof optionsOrTitle === 'object' && optionsOrTitle !== null) {
+      title = optionsOrTitle.title;
+      message = optionsOrTitle.message;
+      confirmText = optionsOrTitle.confirmText || 'Ya, Lanjutkan';
+      cancelText = optionsOrTitle.cancelText || 'Batal';
+      type = optionsOrTitle.type || 'danger';
+      onConfirm = optionsOrTitle.onConfirm;
+    } else {
+      title = optionsOrTitle;
+      message = messageParam;
+      confirmText = 'Ya, Lanjutkan';
+      cancelText = 'Batal';
+      type = 'danger';
+      onConfirm = onConfirmParam;
+    }
+
     setDialog({
       isOpen: true,
       isConfirm: true,

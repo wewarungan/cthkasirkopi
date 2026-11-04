@@ -458,11 +458,18 @@ export default function App() {
   };
 
   const handleLogoutKafe = () => {
-    showConfirm('Keluar dari Kafe?', 'Anda akan keluar dari sesi kafe ini dan kembali ke halaman login utama.', () => {
-      clearMasterSession();
-      setMasterSessionState(null);
-      setIsLoginModalOpen(false);
-      showToast('Berhasil keluar dari sesi kafe.', 'info');
+    showConfirm({
+      title: 'Keluar dari Kafe?',
+      message: 'Anda akan keluar dari sesi kafe ini dan kembali ke halaman login utama.',
+      confirmText: 'Ya, Keluar',
+      cancelText: 'Batal',
+      type: 'danger',
+      onConfirm: () => {
+        clearMasterSession();
+        setMasterSessionState(null);
+        setIsLoginModalOpen(false);
+        showToast('Berhasil keluar dari sesi kafe.', 'info');
+      }
     });
   };
 

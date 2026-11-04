@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Sparkles, Coffee, CupSoda, Flame, Milk, Cookie, PlusCircle, AlertCircle, GlassWater, Tag, Eye, EyeOff, Wallet, ArrowUpRight } from 'lucide-react';
+import { Search, Plus, Sparkles, Coffee, CupSoda, Flame, Milk, Cookie, PlusCircle, AlertCircle, GlassWater, Tag, Eye, EyeOff, Wallet, ArrowUpRight, LayoutGrid, LayoutList } from 'lucide-react';
 import { formatDriveImageUrl } from '../services/defaultData';
 
 export default function PosTerminal({ 
@@ -12,6 +12,15 @@ export default function PosTerminal({
 }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem('pos_view_mode') || 'grid';
+  });
+
+  const toggleViewMode = () => {
+    const next = viewMode === 'grid' ? 'list' : 'grid';
+    setViewMode(next);
+    localStorage.setItem('pos_view_mode', next);
+  };
 
   // Icon mapping helper
   const getCategoryIcon = (iconName) => {
@@ -84,6 +93,17 @@ export default function PosTerminal({
               </button>
             )}
           </div>
+
+          {/* Tombol Ganti Tampilan Grid / List */}
+          <button
+            type="button"
+            onClick={toggleViewMode}
+            className="p-2 bg-[#f6f2ec] hover:bg-[#ede7df] text-stone-700 border border-stone-200/90 rounded-2xl text-xs font-bold flex items-center justify-center transition-all active:scale-95 shrink-0"
+            title={viewMode === 'grid' ? "Ganti ke Tampilan Daftar List (Lebih ringkas)" : "Ganti ke Tampilan Kotak Grid"}
+            aria-label="Toggle View Mode"
+          >
+            {viewMode === 'grid' ? <LayoutList className="w-4 h-4 text-stone-700" /> : <LayoutGrid className="w-4 h-4 text-stone-700" />}
+          </button>
 
           {/* Tombol Catat Kas Keluar (Petty Cash) */}
           {onOpenExpenseModal && (
@@ -167,7 +187,102 @@ export default function PosTerminal({
             <p className="font-semibold text-stone-600">Tidak ada menu yang cocok</p>
             <p className="text-xs text-stone-400 mt-0.5">Coba cari dengan kata kunci lain atau pilih kategori Semua</p>
           </div>
+        ) : viewMode === 'list' ? (
+          /* TAMPILAN LIST (Daftar Baris Kompak & Cepat dengan Foto Kecil) */
+          <div className="space-y-2">
+            {filteredProducts.map((product) => {
+              const cartQty = getProductCartQty(product.id);
+              const formattedImg = formatDriveImageUrl(product.imageUrl);
+
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => product.isAvailable !== false && onAddToCart(product)}
+                  className={`bg-white rounded-2xl p-2.5 sm:p-3 border border-stone-200/80 shadow-2xs hover:shadow-xs transition-all flex items-center justify-between gap-3 ${
+                    product.isAvailable === false
+                      ? 'opacity-65 cursor-not-allowed bg-stone-100'
+                      : 'cursor-pointer active:scale-[0.99]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Foto Menu Mini */}
+                    <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-stone-200/60">
+                      {formattedImg ? (
+                        <img
+                          src={formattedImg}
+                          alt={product.name}
+                          loading="lazy"
+                          className={`w-full h-full object-cover ${product.isAvailable === false ? 'grayscale' : ''}`}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=200&auto=format&fit=crop&q=60';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-amber-800/50 bg-amber-50/50">
+                          <Coffee className="w-5 h-5 stroke-[1.8]" />
+                        </div>
+                      )}
+                      {product.isAvailable === false && (
+                        <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center">
+                          <span className="text-[8px] font-bold text-white bg-rose-600 px-1 py-0.5 rounded">HABIS</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Informasi Menu */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h3 className="font-bold text-stone-900 text-xs sm:text-sm truncate">
+                          {product.name}
+                        </h3>
+                        {product.isBestSeller && (
+                          <span className="text-[9px] font-bold bg-orange-100 text-orange-800 px-1.5 py-0.2 rounded-md">
+                            🔥 Best
+                          </span>
+                        )}
+                        {product.isBaristasChoice && (
+                          <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded-md">
+                            ☕ Barista
+                          </span>
+                        )}
+                      </div>
+                      {product.description && (
+                        <p className="text-[10px] text-stone-500 truncate mt-0.5">
+                          {product.description}
+                        </p>
+                      )}
+                      <span className="font-extrabold text-[#5c3a21] text-xs sm:text-sm mt-0.5 inline-block">
+                        {formatRupiah(product.price)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Aksi Tambah & Qty */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {cartQty > 0 && (
+                      <span className="px-2 py-0.5 bg-[#5c3a21] text-white font-bold text-xs rounded-full shadow-2xs">
+                        {cartQty}x
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      disabled={product.isAvailable === false}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors shadow-2xs ${
+                        product.isAvailable === false 
+                          ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                          : 'bg-amber-100 text-amber-900 hover:bg-[#5c3a21] hover:text-white'
+                      }`}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* TAMPILAN GRID (Kartu Kompak dengan Foto Proporsional, Tidak Lagi Raksasa) */
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3.5 lg:gap-4">
             {filteredProducts.map((product) => {
               const cartQty = getProductCartQty(product.id);
@@ -183,8 +298,8 @@ export default function PosTerminal({
                       : 'cursor-pointer active:scale-[0.98]'
                   }`}
                 >
-                  {/* Fixed Uniform Image & Placeholder Container (Square 1:1 Standard) */}
-                  <div className="relative w-full aspect-square bg-gradient-to-br from-stone-100 via-[#f8f5f0] to-stone-200/60 overflow-hidden shrink-0">
+                  {/* Foto Menu Kompak & Proporsional (Tinggi Terkendali) */}
+                  <div className="relative w-full h-24 xs:h-28 sm:h-32 md:h-36 bg-gradient-to-br from-stone-100 via-[#f8f5f0] to-stone-200/60 overflow-hidden shrink-0">
                     {formattedImg ? (
                       <img
                         src={formattedImg}
@@ -198,7 +313,7 @@ export default function PosTerminal({
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-amber-800/50 bg-gradient-to-br from-amber-50/40 via-stone-100 to-amber-100/30 select-none">
-                        <Coffee className="w-8 h-8 sm:w-10 sm:h-10 stroke-[1.8]" />
+                        <Coffee className="w-7 h-7 sm:w-8 sm:h-8 stroke-[1.8]" />
                       </div>
                     )}
 

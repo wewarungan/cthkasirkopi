@@ -311,8 +311,8 @@ export default function MenuManager({
                   key={product.id}
                   className="bg-white rounded-2xl p-3.5 border border-stone-200/80 shadow-xs flex gap-3.5 items-center justify-between group hover:border-amber-300 transition-colors"
                 >
-                  {/* Thumbnail */}
-                  <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-stone-100">
+                  {/* Thumbnail Kompak */}
+                  <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-stone-200/70">
                     {imgUrl ? (
                       <img
                         src={imgUrl}

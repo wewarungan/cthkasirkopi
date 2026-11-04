@@ -45,6 +45,8 @@ export default function MenuManager({
     imageUrl: '',
     description: '',
     isAvailable: true,
+    isBestSeller: false,
+    isBaristasChoice: false,
   });
   const [imageMode, setImageMode] = useState('gdrive');
   const [previewImage, setPreviewImage] = useState('');
@@ -83,6 +85,8 @@ export default function MenuManager({
       imageUrl: '',
       description: '',
       isAvailable: true,
+      isBestSeller: false,
+      isBaristasChoice: false,
     });
     setPreviewImage('');
     setIsProductModalOpen(true);
@@ -98,6 +102,8 @@ export default function MenuManager({
       imageUrl: product.imageUrl || '',
       description: product.description || '',
       isAvailable: product.isAvailable !== false,
+      isBestSeller: Boolean(product.isBestSeller),
+      isBaristasChoice: Boolean(product.isBaristasChoice),
     });
     setPreviewImage(formatDriveImageUrl(product.imageUrl));
     setIsProductModalOpen(true);
@@ -141,6 +147,8 @@ export default function MenuManager({
       imageUrl: productForm.imageUrl.trim(),
       description: productForm.description.trim(),
       isAvailable: productForm.isAvailable,
+      isBestSeller: Boolean(productForm.isBestSeller),
+      isBaristasChoice: Boolean(productForm.isBaristasChoice),
     };
 
     onSaveProduct(payload);
@@ -312,9 +320,21 @@ export default function MenuManager({
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <span className="inline-block text-[10px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md mb-1">
-                      {categoryName}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-1 mb-1">
+                      <span className="inline-block text-[10px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md">
+                        {categoryName}
+                      </span>
+                      {product.isBestSeller && (
+                        <span className="inline-block text-[10px] font-bold text-orange-800 bg-orange-100 px-1.5 py-0.5 rounded-md">
+                          🔥 Best Seller
+                        </span>
+                      )}
+                      {product.isBaristasChoice && (
+                        <span className="inline-block text-[10px] font-bold text-amber-900 bg-amber-200/80 px-1.5 py-0.5 rounded-md">
+                          ☕ Barista's Choice
+                        </span>
+                      )}
+                    </div>
                     <h3 className="font-bold text-stone-900 text-xs sm:text-sm truncate">
                       {product.name}
                     </h3>
@@ -684,6 +704,32 @@ export default function MenuManager({
                   onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-600 text-xs"
                 />
+              </div>
+
+              {/* Badges Highlight Section */}
+              <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/80 space-y-2">
+                <p className="font-bold text-amber-950 text-xs">Badge Rekomendasi Menu (Highlight Kasir):</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-stone-200 cursor-pointer hover:bg-stone-50 select-none">
+                    <input
+                      type="checkbox"
+                      checked={productForm.isBestSeller}
+                      onChange={(e) => setProductForm({ ...productForm, isBestSeller: e.target.checked })}
+                      className="rounded text-amber-800 focus:ring-amber-700 w-4 h-4"
+                    />
+                    <span className="font-semibold text-stone-800 text-xs">🔥 Best Seller</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2 rounded-lg bg-white border border-stone-200 cursor-pointer hover:bg-stone-50 select-none">
+                    <input
+                      type="checkbox"
+                      checked={productForm.isBaristasChoice}
+                      onChange={(e) => setProductForm({ ...productForm, isBaristasChoice: e.target.checked })}
+                      className="rounded text-amber-800 focus:ring-amber-700 w-4 h-4"
+                    />
+                    <span className="font-semibold text-stone-800 text-xs">☕ Barista's Choice</span>
+                  </label>
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-2.5 bg-stone-50 rounded-xl border border-stone-200">

@@ -26,11 +26,13 @@ export default function ReceiptThermal({
   };
 
   const handleCopyWaText = () => {
+    const queueDisplay = transaction.queueNumber || `#${String(transaction.dailyIndex || 1).padStart(2, '0')}`;
     const lines = [
       `☕ *${settings?.storeName || 'KOPI KITA'}*`,
       `${settings?.storeSlogan ? `_${settings.storeSlogan}_\n` : ''}${settings?.storeAddress || ''}`,
       `Telp: ${settings?.storePhone || ''}`,
       `--------------------------------`,
+      `🔢 *ANTREAN: ${queueDisplay}*`,
       `No: ${transaction.invoiceNumber}`,
       `Waktu: ${transaction.date} ${transaction.time}`,
       `Kasir: ${transaction.cashier || settings?.cashierName || 'Kasir'}`,
@@ -94,6 +96,14 @@ export default function ReceiptThermal({
                   Telp: {settings.storePhone}
                 </p>
               )}
+            </div>
+
+            {/* Big Queue Number */}
+            <div className="text-center py-2 border-t-2 border-b border-stone-800 border-dashed my-1">
+              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-widest block">NOMOR ANTREAN</span>
+              <span className="text-3xl font-black tracking-wider text-stone-900 block my-0.5">
+                {transaction.queueNumber || `#${String(transaction.dailyIndex || 1).padStart(2, '0')}`}
+              </span>
             </div>
 
             {/* Meta Info: No, Waktu, Kasir */}

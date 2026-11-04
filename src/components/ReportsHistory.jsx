@@ -13,6 +13,9 @@ export default function ReportsHistory({
   onBulkDeleteTransactions,
   settings,
   currentUser,
+  expenses = [],
+  onDeleteExpense,
+  onOpenExpenseModal,
 }) {
   const { showToast, showConfirm } = useNotification();
   const isOwner = currentUser?.role === 'owner';
@@ -72,6 +75,39 @@ export default function ReportsHistory({
       return matchPeriod && matchSearch;
     });
   }, [transactions, period, selectedMonth, selectedYear, searchQuery, todayStr, isKasir]);
+
+  // Filter Expenses based on period
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(exp => {
+      if (!exp.date) return false;
+      if (isKasir || period === 'today') {
+        return exp.date === todayStr;
+      } else if (period === 'month') {
+        return exp.date.startsWith(selectedMonth);
+      } else if (period === 'year') {
+        return exp.date.startsWith(selectedYear);
+      }
+      return true;
+    });
+  }, [expenses, period, selectedMonth, selectedYear, todayStr, isKasir]);
+
+  const totalExpense = useMemo(() => {
+    return filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  }, [filteredExpenses]);
+
+  const totalCashSales = useMemo(() => {
+    return filteredTransactions
+      .filter(tx => tx.paymentMethod === 'Tunai')
+      .reduce((sum, tx) => sum + (tx.total || 0), 0);
+  }, [filteredTransactions]);
+
+  const totalQrisSales = useMemo(() => {
+    return filteredTransactions
+      .filter(tx => tx.paymentMethod === 'QRIS')
+      .reduce((sum, tx) => sum + (tx.total || 0), 0);
+  }, [filteredTransactions]);
+
+  const netCashInDrawer = totalCashSales - totalExpense;
 
   // Calculations for Summary Cards
   const totalOmzet = useMemo(() => {
@@ -276,52 +312,90 @@ export default function ReportsHistory({
       )}
 
       {/* ========================================================= */}
-      {/* 3 TOP SUMMARY CARDS (HANYA DITAMPILKAN KE OWNER & ADMIN) */}
+      {/* 4 TOP SUMMARY CARDS (HANYA DITAMPILKAN KE OWNER & ADMIN) */}
       {/* ========================================================= */}
       {!isKasir && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Card 1: Omzet */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border-l-4 border-l-[#a67c52] shadow-sm flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-white via-white to-[#fbf7f1]">
-            <div className="flex items-center gap-2 text-stone-500 text-[11px] font-bold uppercase tracking-wider">
-              <div className="p-2 rounded-xl bg-[#f2eae0] text-[#7d5635]">
-                <Wallet className="w-4 h-4" />
+          <div className="bg-white rounded-3xl p-4 border-l-4 border-l-[#5c3a21] shadow-2xs flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-stone-500 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+              <div className="p-1.5 rounded-lg bg-[#f2eae0] text-[#7d5635]">
+                <Wallet className="w-3.5 h-3.5" />
               </div>
-              <span>{period === 'today' ? 'OMZET HARI INI' : `OMZET ${getPeriodLabel().toUpperCase()}`}</span>
+              <span>OMZET PENJUALAN</span>
             </div>
-            <div className="mt-3">
-              <h3 className="text-xl sm:text-2xl font-extrabold text-stone-900">
+            <div className="mt-2">
+              <h3 className="text-lg sm:text-xl font-extrabold text-stone-900 truncate">
                 {formatRupiah(totalOmzet)}
               </h3>
+              <p className="text-[10px] text-stone-400 mt-0.5">
+                Tunai: {formatShortRupiah(totalCashSales)} • QRIS: {formatShortRupiah(totalQrisSales)}
+              </p>
             </div>
           </div>
 
           {/* Card 2: Jumlah Transaksi */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border-l-4 border-l-[#a67c52] shadow-sm flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-white via-white to-[#fbf7f1]">
-            <div className="flex items-center gap-2 text-stone-500 text-[11px] font-bold uppercase tracking-wider">
-              <div className="p-2 rounded-xl bg-[#f2eae0] text-[#7d5635]">
-                <ShoppingCart className="w-4 h-4" />
+          <div className="bg-white rounded-3xl p-4 border-l-4 border-l-[#a67c52] shadow-2xs flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-stone-500 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+              <div className="p-1.5 rounded-lg bg-[#f2eae0] text-[#7d5635]">
+                <ShoppingCart className="w-3.5 h-3.5" />
               </div>
-              <span>JUMLAH TRANSAKSI</span>
+              <span>TOTAL TRANSAKSI</span>
             </div>
-            <div className="mt-3">
-              <h3 className="text-xl sm:text-2xl font-extrabold text-stone-900">
+            <div className="mt-2">
+              <h3 className="text-lg sm:text-xl font-extrabold text-stone-900">
                 {totalCount}
               </h3>
+              <p className="text-[10px] text-stone-400 mt-0.5">
+                Rata-rata: {formatRupiah(avgPerTx)}
+              </p>
             </div>
           </div>
 
-          {/* Card 3: Rata-Rata / Transaksi */}
-          <div className="bg-white rounded-3xl p-4 sm:p-5 border-l-4 border-l-[#a67c52] shadow-sm flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-white via-white to-[#fbf7f1]">
-            <div className="flex items-center gap-2 text-stone-500 text-[11px] font-bold uppercase tracking-wider">
-              <div className="p-2 rounded-xl bg-[#f2eae0] text-[#7d5635]">
-                <TrendingUp className="w-4 h-4" />
+          {/* Card 3: Kas Keluar (Petty Cash) */}
+          <div className="bg-white rounded-3xl p-4 border-l-4 border-l-rose-500 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-stone-500 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-1.5">
+                <div className="p-1.5 rounded-lg bg-rose-50 text-rose-700">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </div>
+                <span>KAS KELUAR</span>
               </div>
-              <span>RATA-RATA / TRANSAKSI</span>
+              {onOpenExpenseModal && (
+                <button
+                  type="button"
+                  onClick={onOpenExpenseModal}
+                  className="text-[10px] font-bold text-rose-700 hover:underline"
+                >
+                  + Catat
+                </button>
+              )}
             </div>
-            <div className="mt-3">
-              <h3 className="text-xl sm:text-2xl font-extrabold text-stone-900">
-                {formatRupiah(avgPerTx)}
+            <div className="mt-2">
+              <h3 className="text-lg sm:text-xl font-extrabold text-rose-600 truncate">
+                {formatRupiah(totalExpense)}
               </h3>
+              <p className="text-[10px] text-stone-400 mt-0.5">
+                {filteredExpenses.length} pengeluaran kas kecil
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: Sisa Kas di Laci (Uang Fisik Kasir) */}
+          <div className="bg-white rounded-3xl p-4 border-l-4 border-l-emerald-600 shadow-2xs flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-stone-500 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
+                <CheckCircle className="w-3.5 h-3.5" />
+              </div>
+              <span>SISA KAS LACI</span>
+            </div>
+            <div className="mt-2">
+              <h3 className={`text-lg sm:text-xl font-extrabold truncate ${netCashInDrawer < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                {formatRupiah(netCashInDrawer)}
+              </h3>
+              <p className="text-[10px] text-stone-400 mt-0.5">
+                Uang tunai wajib ada di laci
+              </p>
             </div>
           </div>
         </div>
@@ -755,6 +829,93 @@ export default function ReportsHistory({
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================= */}
+      {/* SECTION 5: RIWAYAT KAS KELUAR (PETTY CASH) */}
+      {/* ========================================================= */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/90 shadow-sm space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-rose-50 rounded-xl text-rose-700">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-stone-900 text-sm sm:text-base">
+                Riwayat Kas Keluar Toko (Petty Cash)
+              </h3>
+              <p className="text-[11px] text-stone-500">
+                Total pengeluaran kas kecil periode ini: <strong className="text-rose-600">{formatRupiah(totalExpense)}</strong>
+              </p>
+            </div>
+          </div>
+
+          {onOpenExpenseModal && (
+            <button
+              type="button"
+              onClick={onOpenExpenseModal}
+              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-2xs transition-colors flex items-center gap-1"
+            >
+              <span>+ Catat Kas Keluar</span>
+            </button>
+          )}
+        </div>
+
+        {filteredExpenses.length === 0 ? (
+          <div className="text-center py-6 text-stone-400 text-xs">
+            Tidak ada catatan kas keluar pada periode ini.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredExpenses.map((exp) => (
+              <div
+                key={exp.id}
+                className="flex items-center justify-between p-3 rounded-2xl bg-[#fcfaf7] border border-stone-200/80 hover:border-rose-200 transition-colors"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-stone-900 text-xs sm:text-sm">
+                      {exp.note}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold">
+                      {exp.category || 'Operasional'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    {exp.date} {exp.time} · Dicatat oleh: <strong>{exp.recordedBy || 'Kasir'}</strong>
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <span className="font-extrabold text-rose-600 text-xs sm:text-sm">
+                    - {formatRupiah(exp.amount)}
+                  </span>
+                  {onDeleteExpense && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showConfirm({
+                          title: 'Hapus Catatan Kas Keluar',
+                          message: `Yakin ingin menghapus catatan pengeluaran "${exp.note}" sebesar ${formatRupiah(exp.amount)}? Saldo laci akan bertambah kembali.`,
+                          confirmText: 'Ya, Hapus',
+                          type: 'danger',
+                          onConfirm: () => {
+                            onDeleteExpense(exp.id);
+                            showToast('Catatan kas keluar berhasil dihapus', 'info');
+                          }
+                        });
+                      }}
+                      className="p-1.5 text-stone-400 hover:text-rose-600 rounded-lg transition-colors"
+                      title="Hapus Pengeluaran Ini"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

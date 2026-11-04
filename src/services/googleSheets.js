@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   USERS: 'pos_kopi_users',
   CURRENT_USER: 'pos_kopi_current_user',
   OPEN_TABLES: 'pos_kopi_open_tables',
+  EXPENSES: 'pos_kopi_expenses',
 };
 
 // Local storage helpers

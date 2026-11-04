@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Coffee, Shield, KeyRound, ArrowLeft, Check, Delete, Lock, UserCheck } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Coffee, Shield, KeyRound, ArrowLeft, Check, Delete, Lock, UserCheck, Keyboard } from 'lucide-react';
 
 export default function LoginModal({
   isOpen,
@@ -12,6 +12,48 @@ export default function LoginModal({
   const [selectedUser, setSelectedUser] = useState(null);
   const [pinInput, setPinInput] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const mobileInputRef = useRef(null);
+
+  // Focus mobile input whenever user selected
+  useEffect(() => {
+    if (selectedUser && mobileInputRef.current) {
+      mobileInputRef.current.focus();
+    }
+  }, [selectedUser]);
+
+  // Physical keyboard listener (Laptop/PC)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      // If no user selected, press 1-9 to select user
+      if (!selectedUser) {
+        const num = parseInt(e.key, 10);
+        if (!isNaN(num) && num >= 1 && num <= users.length) {
+          handleSelectUser(users[num - 1]);
+        } else if (e.key === 'Escape' && canClose && onClose) {
+          onClose();
+        }
+        return;
+      }
+
+      // If user selected:
+      if (e.key >= '0' && e.key <= '9') {
+        handleKeyPress(e.key);
+      } else if (e.key === 'Backspace') {
+        handleDelete();
+      } else if (e.key === 'Enter') {
+        verifyPin(pinInput);
+      } else if (e.key === 'Escape') {
+        setSelectedUser(null);
+        setPinInput('');
+        setErrorMsg('');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, selectedUser, pinInput, users, canClose, onClose]);
 
   if (!isOpen) return null;
 
@@ -155,21 +197,50 @@ export default function LoginModal({
                 </div>
               </div>
 
-              {/* PIN Dots Display */}
-              <div className="flex justify-center items-center gap-3 py-2">
-                {Array.from({ length: selectedUser.pin.length }).map((_, idx) => {
-                  const isFilled = idx < pinInput.length;
-                  return (
-                    <div
-                      key={idx}
-                      className={`w-4 h-4 rounded-full transition-all duration-200 ${
-                        isFilled 
-                          ? 'bg-[#5c3a21] scale-110 shadow-xs' 
-                          : 'bg-stone-300'
-                      }`}
-                    ></div>
-                  );
-                })}
+              {/* PIN Dots Display & Hidden Input for Mobile Keypad */}
+              <div 
+                onClick={() => mobileInputRef.current?.focus()} 
+                className="cursor-pointer relative flex flex-col items-center justify-center py-2"
+                title="Klik untuk membuka keyboard ponsel"
+              >
+                <input
+                  ref={mobileInputRef}
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={selectedUser.pin.length}
+                  value={pinInput}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, '');
+                    setPinInput(clean);
+                    setErrorMsg('');
+                    if (clean.length === selectedUser.pin.length) {
+                      verifyPin(clean);
+                    }
+                  }}
+                  className="absolute opacity-0 pointer-events-none w-1 h-1 -top-10"
+                />
+
+                <div className="flex justify-center items-center gap-3 py-1">
+                  {Array.from({ length: selectedUser.pin.length }).map((_, idx) => {
+                    const isFilled = idx < pinInput.length;
+                    return (
+                      <div
+                        key={idx}
+                        className={`w-4 h-4 rounded-full transition-all duration-200 ${
+                          isFilled 
+                            ? 'bg-[#5c3a21] scale-110 shadow-xs ring-2 ring-amber-300' 
+                            : 'bg-stone-300'
+                        }`}
+                      ></div>
+                    );
+                  })}
+                </div>
+
+                <p className="text-[10px] text-stone-400 mt-1 flex items-center gap-1">
+                  <Keyboard className="w-3 h-3" />
+                  <span>Bisa ketik langsung via keyboard laptop atau HP</span>
+                </p>
               </div>
 
               {errorMsg && (

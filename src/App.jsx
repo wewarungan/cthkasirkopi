@@ -10,6 +10,7 @@ import ReportsHistory from './components/ReportsHistory';
 import SettingsModal from './components/SettingsModal';
 import OpenTablesModal from './components/OpenTablesModal';
 import LoginModal from './components/LoginModal';
+import ExpenseModal from './components/ExpenseModal';
 import { useNotification } from './context/NotificationContext';
 
 import { 
@@ -32,14 +33,31 @@ export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState('pos'); // 'pos', 'reports', 'menu', 'settings'
 
-  // Persistent States
-  const [products, setProducts] = useState(() => getLocalData(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS));
-  const [categories, setCategories] = useState(() => getLocalData(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES));
+  // Persistent States with Auto-Sanitizer for Clean Data
+  const [products, setProducts] = useState(() => {
+    const saved = getLocalData(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    // Cek jika ada benturan ID lama (seperti prod-3/prod-4 kembar), bersihkan ke INITIAL_PRODUCTS
+    const seen = new Set();
+    const hasDup = Array.isArray(saved) && saved.some(p => {
+      if (seen.has(p.id)) return true;
+      seen.add(p.id);
+      return false;
+    });
+    return hasDup ? INITIAL_PRODUCTS : saved;
+  });
+
+  const [categories, setCategories] = useState(() => {
+    const saved = getLocalData(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES);
+    const hasBundling = Array.isArray(saved) && saved.some(c => c.id === 'bundling');
+    return hasBundling ? saved : INITIAL_CATEGORIES;
+  });
+
   const [transactions, setTransactions] = useState(() => getLocalData(STORAGE_KEYS.TRANSACTIONS, []));
   const [settings, setSettings] = useState(() => getLocalData(STORAGE_KEYS.SETTINGS, INITIAL_SETTINGS));
   const [users, setUsers] = useState(() => getLocalData(STORAGE_KEYS.USERS, INITIAL_USERS));
   const [currentUser, setCurrentUser] = useState(() => getLocalData(STORAGE_KEYS.CURRENT_USER, INITIAL_USERS[0]));
   const [openTables, setOpenTables] = useState(() => getLocalData(STORAGE_KEYS.OPEN_TABLES, []));
+  const [expenses, setExpenses] = useState(() => getLocalData(STORAGE_KEYS.EXPENSES, []));
 
   // Cart & Order State
   const [cartItems, setCartItems] = useState([]);
@@ -54,6 +72,7 @@ export default function App() {
   const [currentReceiptTx, setCurrentReceiptTx] = useState(null);
   const [isOpenTablesModalOpen, setIsOpenTablesModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
 
   // Sync state
   const [pendingSync, setPendingSync] = useState(() => getLocalData(STORAGE_KEYS.PENDING_SYNC, []));
@@ -89,12 +108,8 @@ export default function App() {
   }, [openTables]);
 
   useEffect(() => {
-    setLocalData(STORAGE_KEYS.TRANSACTIONS, transactions);
-  }, [transactions]);
-
-  useEffect(() => {
-    setLocalData(STORAGE_KEYS.SETTINGS, settings);
-  }, [settings]);
+    setLocalData(STORAGE_KEYS.EXPENSES, expenses);
+  }, [expenses]);
 
   // Periodic offline sync processor
   useEffect(() => {
@@ -186,8 +201,14 @@ export default function App() {
     const randomSuffix = Math.floor(10000000 + Math.random() * 90000000);
     const invoiceNumber = `${prefix}${randomSuffix}`;
 
+    // Nomor Antrean Harian Otomatis (#01, #02, #03...)
+    const todayTxCount = transactions.filter(t => t.date === dateStr).length + 1;
+    const queueNumber = `#${String(todayTxCount).padStart(2, '0')}`;
+
     const newTransaction = {
       invoiceNumber,
+      queueNumber,
+      dailyIndex: todayTxCount,
       date: dateStr,
       time: timeStr,
       customerName: customerName.trim() || (orderType === 'Dine In' ? 'Dine In' : 'Take Away'),
@@ -385,12 +406,22 @@ export default function App() {
     setIsLoginModalOpen(false);
   };
 
+  // Expense Management (Petty Cash / Kas Keluar)
+  const handleSaveExpense = (expenseData) => {
+    setExpenses(prev => [expenseData, ...prev]);
+  };
+
+  const handleDeleteExpense = (expenseId) => {
+    setExpenses(prev => prev.filter(e => e.id !== expenseId));
+  };
+
   // Reset demo data
   const handleResetData = () => {
     setProducts(INITIAL_PRODUCTS);
     setCategories(INITIAL_CATEGORIES);
     setSettings(INITIAL_SETTINGS);
     setTransactions([]);
+    setExpenses([]);
     setCartItems([]);
     localStorage.clear();
     showToast('Seluruh data berhasil direset kembali ke setelan awal!', 'success');
@@ -434,6 +465,8 @@ export default function App() {
               categories={categories}
               onAddToCart={handleAddToCart}
               cartItems={cartItems}
+              onToggleAvailability={handleToggleAvailability}
+              onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
             />
 
             {/* Desktop Cart Sidebar */}
@@ -531,6 +564,9 @@ export default function App() {
             onBulkDeleteTransactions={handleBulkDeleteTransactions}
             settings={settings}
             currentUser={currentUser}
+            expenses={expenses}
+            onDeleteExpense={handleDeleteExpense}
+            onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
           />
         )}
 
@@ -586,6 +622,14 @@ export default function App() {
         users={users}
         onLoginSuccess={handleLoginSuccess}
         storeName={settings.storeName}
+      />
+
+      {/* Modal Catat Kas Keluar (Petty Cash) */}
+      <ExpenseModal
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        onSaveExpense={handleSaveExpense}
+        currentUser={currentUser}
       />
     </div>
   );

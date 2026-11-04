@@ -75,6 +75,24 @@ html.dark .border-stone-100 {
   border-color: #38312b !important;
 }
 
+/* Ensure thermal receipt preview is ALWAYS realistic physical paper even in dark mode */
+#printable-receipt,
+html.dark #printable-receipt {
+  background-color: #ffffff !important;
+  color: #1c1917 !important;
+  border-color: #d6d3d1 !important;
+}
+
+#printable-receipt *,
+html.dark #printable-receipt * {
+  color: inherit;
+  border-color: #e7e5e4;
+}
+
+html.dark #printable-receipt .bg-stone-50 {
+  background-color: #f5f5f4 !important;
+}
+
 /* Print thermal styling */
 @media print {
   body * {

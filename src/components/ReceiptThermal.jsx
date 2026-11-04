@@ -67,17 +67,22 @@ export default function ReceiptThermal({
   const printerWidthClass = settings?.printerWidth === '80mm' ? 'max-w-[340px]' : 'max-w-[280px]';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-[#fcfaf7] w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[94vh] border border-stone-200 animate-in zoom-in-95">
+    <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-[#ede7df] dark:bg-[#1a1715] w-full max-w-md rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[95vh] border border-stone-300 dark:border-stone-800 animate-in zoom-in-95">
         
-        {/* Receipt Container preview */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex justify-center bg-[#f3efe9]">
+        {/* Receipt Container preview with smooth scroll and clean bottom breathing room */}
+        <div className="p-3 sm:p-6 pb-6 overflow-y-auto flex-1 flex flex-col items-center bg-[#e8e1d7] dark:bg-[#141211]">
           
-          {/* Printable Receipt Paper (Monospace Thermal Layout - Sesuai Foto User) */}
+          {/* Printable Receipt Paper (Monospace Thermal Layout - Full wrapping guarantee) */}
           <div 
             id="printable-receipt"
-            className={`w-full ${printerWidthClass} bg-white px-5 py-6 shadow-md border border-stone-200/80 text-stone-900 font-mono text-[12px] leading-relaxed rounded-2xl select-text`}
+            className={`w-full ${printerWidthClass} h-auto min-h-fit bg-white px-5 py-6 shadow-2xl border border-stone-300/80 text-stone-900 font-mono text-[12px] leading-relaxed rounded-2xl select-text my-1`}
           >
+            {/* Top Paper Tear Edge Effect */}
+            <div className="text-center text-stone-300 text-[10px] tracking-[0.25em] -mt-2 mb-3 select-none">
+              - - - - - - - - - - - - - - - - - - -
+            </div>
+
             {/* Header: Store Name, Slogan & Address */}
             <div className="text-center space-y-1 pb-3">
               <h2 className="font-extrabold text-base tracking-[0.2em] uppercase text-stone-900">
@@ -195,11 +200,16 @@ export default function ReceiptThermal({
             <div className="text-center pt-3 border-t border-stone-300 border-dashed text-[11px] text-stone-600 whitespace-pre-line leading-relaxed">
               <p>{settings?.receiptFooter || 'Terima kasih atas kunjungan Anda\n~ Kopi Kita ~'}</p>
             </div>
+
+            {/* Bottom Paper Tear Edge Effect */}
+            <div className="text-center text-stone-300 text-[10px] tracking-[0.25em] mt-4 -mb-2 select-none">
+              - - - - - - - - - - - - - - - - - - -
+            </div>
           </div>
         </div>
 
         {/* Modal Bottom Actions (Sesuai Foto User: [Tutup] dan [Cetak]) */}
-        <div className="p-4 bg-white border-t border-stone-200/90 space-y-2">
+        <div className="p-4 bg-white dark:bg-[#211c19] border-t border-stone-200 dark:border-stone-800 space-y-2 shrink-0 shadow-lg">
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"

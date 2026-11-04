@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { 
   Wallet, ShoppingCart, TrendingUp, Calendar, 
   Printer, Search, DollarSign, PieChart, ShieldAlert,
-  Trash2, CheckSquare, Square, CheckCircle, AlertTriangle
+  Trash2, CheckSquare, Square, CheckCircle, AlertTriangle,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 
@@ -31,6 +32,15 @@ export default function ReportsHistory({
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear().toString());
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination States
+  const [txPage, setTxPage] = useState(1);
+  const [txPerPage, setTxPerPage] = useState(10); // 10, 25, 50, 100
+
+  const [expPage, setExpPage] = useState(1);
+  const [expPerPage, setExpPerPage] = useState(5); // 5, 10, 25
+
+  const [topProductLimit, setTopProductLimit] = useState(5); // 5, 10, 'all'
 
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
@@ -220,6 +230,31 @@ export default function ReportsHistory({
       .sort((a, b) => b.qty - a.qty);
   }, [filteredTransactions]);
 
+  // Transactions pagination calculation
+  const totalTxPages = Math.max(1, Math.ceil(filteredTransactions.length / txPerPage));
+  const safeTxPage = Math.min(Math.max(1, txPage), totalTxPages);
+  const txStartIndex = filteredTransactions.length > 0 ? (safeTxPage - 1) * txPerPage : 0;
+  const txEndIndex = Math.min(txStartIndex + txPerPage, filteredTransactions.length);
+  const paginatedTransactions = filteredTransactions.slice(txStartIndex, txEndIndex);
+
+  // Expenses pagination calculation
+  const totalExpPages = Math.max(1, Math.ceil(filteredExpenses.length / expPerPage));
+  const safeExpPage = Math.min(Math.max(1, expPage), totalExpPages);
+  const expStartIndex = filteredExpenses.length > 0 ? (safeExpPage - 1) * expPerPage : 0;
+  const expEndIndex = Math.min(expStartIndex + expPerPage, filteredExpenses.length);
+  const paginatedExpenses = filteredExpenses.slice(expStartIndex, expEndIndex);
+
+  // Top products display list
+  const displayedTopProducts = topProductLimit === 'all' 
+    ? topProducts 
+    : topProducts.slice(0, Number(topProductLimit));
+
+  const handlePeriodChange = (newPeriod) => {
+    setPeriod(newPeriod);
+    setTxPage(1);
+    setExpPage(1);
+  };
+
   const getPeriodLabel = () => {
     if (isKasir) return 'Shift Hari Ini';
     if (period === 'today') return 'Hari ini';
@@ -246,7 +281,7 @@ export default function ReportsHistory({
         {!isKasir && (
           <div className="flex items-center gap-1.5 bg-[#ede7de] p-1 rounded-2xl overflow-x-auto text-xs">
             <button
-              onClick={() => setPeriod('today')}
+              onClick={() => handlePeriodChange('today')}
               className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
                 period === 'today' ? 'bg-[#5c3a21] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
               }`}
@@ -254,7 +289,7 @@ export default function ReportsHistory({
               Hari Ini
             </button>
             <button
-              onClick={() => setPeriod('month')}
+              onClick={() => handlePeriodChange('month')}
               className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
                 period === 'month' ? 'bg-[#5c3a21] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
               }`}
@@ -262,7 +297,7 @@ export default function ReportsHistory({
               Per Bulan
             </button>
             <button
-              onClick={() => setPeriod('year')}
+              onClick={() => handlePeriodChange('year')}
               className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
                 period === 'year' ? 'bg-[#5c3a21] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
               }`}
@@ -270,7 +305,7 @@ export default function ReportsHistory({
               Per Tahun
             </button>
             <button
-              onClick={() => setPeriod('all')}
+              onClick={() => handlePeriodChange('all')}
               className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all ${
                 period === 'all' ? 'bg-[#5c3a21] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
               }`}
@@ -289,7 +324,11 @@ export default function ReportsHistory({
           <input
             type="month"
             value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
+            onChange={(e) => {
+              setSelectedMonth(e.target.value);
+              setTxPage(1);
+              setExpPage(1);
+            }}
             className="px-2.5 py-1 text-xs bg-[#f8f5f0] border border-stone-200 rounded-xl focus:outline-none font-bold text-stone-800"
           />
         </div>
@@ -301,7 +340,11 @@ export default function ReportsHistory({
           <span className="text-xs font-semibold text-stone-600">Pilih Tahun:</span>
           <select
             value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
+            onChange={(e) => {
+              setSelectedYear(e.target.value);
+              setTxPage(1);
+              setExpPage(1);
+            }}
             className="px-2.5 py-1 text-xs bg-[#f8f5f0] border border-stone-200 rounded-xl focus:outline-none font-bold text-stone-800"
           >
             {[2024, 2025, 2026, 2027, 2028].map(y => (
@@ -585,24 +628,64 @@ export default function ReportsHistory({
       {/* SECTION 3: PRODUK TERLARIS */}
       {/* ========================================================= */}
       <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/90 shadow-sm space-y-3.5">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-4 bg-[#7d5635] rounded-full"></span>
-          <h3 className="font-bold text-stone-900 text-sm">Produk Terlaris</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-4 bg-[#7d5635] rounded-full"></span>
+            <h3 className="font-bold text-stone-900 text-sm">Produk Terlaris</h3>
+            <span className="text-xs text-stone-400">({topProducts.length})</span>
+          </div>
+
+          {topProducts.length > 5 && (
+            <div className="flex items-center gap-1 bg-[#ede7de] p-1 rounded-xl text-xs self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setTopProductLimit(5)}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  topProductLimit === 5 ? 'bg-[#5c3a21] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                Top 5
+              </button>
+              <button
+                type="button"
+                onClick={() => setTopProductLimit(10)}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  topProductLimit === 10 ? 'bg-[#5c3a21] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                Top 10
+              </button>
+              <button
+                type="button"
+                onClick={() => setTopProductLimit('all')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+                  topProductLimit === 'all' ? 'bg-[#5c3a21] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
+                }`}
+              >
+                Semua ({topProducts.length})
+              </button>
+            </div>
+          )}
         </div>
 
-        {topProducts.length === 0 ? (
+        {displayedTopProducts.length === 0 ? (
           <div className="text-center py-6 text-xs text-stone-400">
             Belum ada produk terjual pada periode ini.
           </div>
         ) : (
           <div className="space-y-2">
-            {topProducts.slice(0, 5).map((prod, idx) => (
+            {displayedTopProducts.map((prod, idx) => (
               <div 
                 key={idx}
                 className="flex items-center justify-between p-3 rounded-2xl bg-[#fcfaf7] border border-stone-200/60"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-[#b58e6d] text-white font-bold text-xs flex items-center justify-center shrink-0">
+                  <div className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center shrink-0 ${
+                    idx === 0 ? 'bg-amber-500 text-white' :
+                    idx === 1 ? 'bg-stone-400 text-white' :
+                    idx === 2 ? 'bg-amber-700 text-white' :
+                    'bg-stone-200 text-stone-700'
+                  }`}>
                     {idx + 1}
                   </div>
                   <span className="font-bold text-xs sm:text-sm text-stone-800">
@@ -610,7 +693,7 @@ export default function ReportsHistory({
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-semibold text-stone-500">
+                  <span className="text-xs font-semibold text-stone-600">
                     {prod.qty} terjual
                   </span>
                 </div>
@@ -658,7 +741,10 @@ export default function ReportsHistory({
                 type="text"
                 placeholder="Cari invoice, kasir..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setTxPage(1);
+                }}
                 className="pl-8 pr-3 py-1.5 bg-[#f8f5f0] border border-stone-200 rounded-xl text-xs w-full sm:w-48 focus:outline-none focus:bg-white"
               />
             </div>
@@ -735,7 +821,7 @@ export default function ReportsHistory({
           </div>
         ) : (
           <div className="space-y-2.5">
-            {filteredTransactions.map((tx) => {
+            {paginatedTransactions.map((tx) => {
               const isChecked = selectedInvoices.includes(tx.invoiceNumber);
               const totalItemsCount = tx.items?.reduce((s, i) => s + (i.qty || 1), 0) || 0;
               const formattedTime = tx.time ? tx.time.slice(0, 5) : '00:00';
@@ -831,6 +917,79 @@ export default function ReportsHistory({
             })}
           </div>
         )}
+
+        {/* Pagination Bar for Transactions */}
+        {filteredTransactions.length > 0 && (
+          <div className="pt-3 border-t border-stone-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-stone-500">
+              <span>Tampilkan:</span>
+              <select
+                value={txPerPage}
+                onChange={(e) => {
+                  setTxPerPage(Number(e.target.value));
+                  setTxPage(1);
+                }}
+                className="px-2 py-1 bg-[#f8f5f0] border border-stone-200 rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>per hal</span>
+              <span className="text-stone-300">|</span>
+              <span className="font-medium text-stone-600">
+                {txStartIndex + 1} - {txEndIndex} dari {filteredTransactions.length} transaksi
+              </span>
+            </div>
+
+            {totalTxPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={safeTxPage <= 1}
+                  onClick={() => setTxPage(1)}
+                  title="Halaman Pertama"
+                  className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={safeTxPage <= 1}
+                  onClick={() => setTxPage(p => Math.max(1, p - 1))}
+                  title="Halaman Sebelumnya"
+                  className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                <span className="px-3 py-1 font-bold text-stone-700 bg-stone-100 rounded-lg text-xs">
+                  Hal {safeTxPage} / {totalTxPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={safeTxPage >= totalTxPages}
+                  onClick={() => setTxPage(p => Math.min(totalTxPages, p + 1))}
+                  title="Halaman Selanjutnya"
+                  className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={safeTxPage >= totalTxPages}
+                  onClick={() => setTxPage(totalTxPages)}
+                  title="Halaman Terakhir"
+                  className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ========================================================= */}
@@ -869,7 +1028,7 @@ export default function ReportsHistory({
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredExpenses.map((exp) => (
+            {paginatedExpenses.map((exp) => (
               <div
                 key={exp.id}
                 className="flex items-center justify-between p-3 rounded-2xl bg-[#fcfaf7] border border-stone-200/80 hover:border-rose-200 transition-colors"
@@ -916,6 +1075,78 @@ export default function ReportsHistory({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination Bar for Expenses */}
+        {filteredExpenses.length > 0 && (
+          <div className="pt-3 border-t border-stone-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-stone-500">
+              <span>Tampilkan:</span>
+              <select
+                value={expPerPage}
+                onChange={(e) => {
+                  setExpPerPage(Number(e.target.value));
+                  setExpPage(1);
+                }}
+                className="px-2 py-1 bg-[#f8f5f0] border border-stone-200 rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+              </select>
+              <span>per hal</span>
+              <span className="text-stone-300">|</span>
+              <span className="font-medium text-stone-600">
+                {expStartIndex + 1} - {expEndIndex} dari {filteredExpenses.length} catatan
+              </span>
+            </div>
+
+            {totalExpPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={safeExpPage <= 1}
+                  onClick={() => setExpPage(1)}
+                  title="Halaman Pertama"
+                  className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                >
+                  <ChevronsLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={safeExpPage <= 1}
+                  onClick={() => setExpPage(p => Math.max(1, p - 1))}
+                  title="Halaman Sebelumnya"
+                  className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                <span className="px-3 py-1 font-bold text-stone-700 bg-stone-100 rounded-lg text-xs">
+                  Hal {safeExpPage} / {totalExpPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={safeExpPage >= totalExpPages}
+                  onClick={() => setExpPage(p => Math.min(totalExpPages, p + 1))}
+                  title="Halaman Selanjutnya"
+                  className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={safeExpPage >= totalExpPages}
+                  onClick={() => setExpPage(totalExpPages)}
+                  title="Halaman Terakhir"
+                  className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                >
+                  <ChevronsRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

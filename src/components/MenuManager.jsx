@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Plus, Edit2, Trash2, Image, Check, AlertCircle, Coffee, Eye, EyeOff, 
-  Link, Upload, X, Layers, Tag, CupSoda, Flame, Milk, Cookie, Sparkles, PlusCircle, GlassWater
+  Link, Upload, X, Layers, Tag, CupSoda, Flame, Milk, Cookie, Sparkles, PlusCircle, GlassWater,
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
 } from 'lucide-react';
 import { formatDriveImageUrl } from '../services/defaultData';
 import { useNotification } from '../context/NotificationContext';
@@ -35,6 +36,10 @@ export default function MenuManager({
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedCatFilter, setSelectedCatFilter] = useState('all');
+
+  // Product Pagination State
+  const [prodPage, setProdPage] = useState(1);
+  const [prodPerPage, setProdPerPage] = useState(12); // 12, 24, 48, 'all'
 
   // Product Form State
   const [productForm, setProductForm] = useState({
@@ -203,6 +208,12 @@ export default function MenuManager({
     return matchCat && matchSearch;
   });
 
+  const totalProdPages = prodPerPage === 'all' ? 1 : Math.max(1, Math.ceil(filteredProducts.length / prodPerPage));
+  const safeProdPage = Math.min(Math.max(1, prodPage), totalProdPages);
+  const prodStartIndex = filteredProducts.length > 0 && prodPerPage !== 'all' ? (safeProdPage - 1) * prodPerPage : 0;
+  const prodEndIndex = prodPerPage === 'all' ? filteredProducts.length : Math.min(prodStartIndex + prodPerPage, filteredProducts.length);
+  const paginatedProducts = prodPerPage === 'all' ? filteredProducts : filteredProducts.slice(prodStartIndex, prodEndIndex);
+
   return (
     <div className="flex-1 bg-stone-50 overflow-y-auto p-4 sm:p-6 space-y-5">
       {/* Top Banner & Tab Toggle */}
@@ -252,7 +263,10 @@ export default function MenuManager({
               type="text"
               placeholder="Cari nama menu..."
               value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
+              onChange={(e) => {
+                setSearchFilter(e.target.value);
+                setProdPage(1);
+              }}
               className="px-3.5 py-2 bg-white border border-stone-200 rounded-xl text-xs sm:text-sm w-full sm:w-72 focus:outline-none focus:ring-1 focus:ring-amber-500"
             />
 
@@ -261,7 +275,10 @@ export default function MenuManager({
                 {categories.map(c => (
                   <button
                     key={c.id}
-                    onClick={() => setSelectedCatFilter(c.id)}
+                    onClick={() => {
+                      setSelectedCatFilter(c.id);
+                      setProdPage(1);
+                    }}
                     className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors ${
                       selectedCatFilter === c.id
                         ? 'bg-stone-900 text-white'
@@ -285,7 +302,7 @@ export default function MenuManager({
 
           {/* Product Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-            {filteredProducts.map(product => {
+            {paginatedProducts.map(product => {
               const imgUrl = formatDriveImageUrl(product.imageUrl);
               const categoryName = categories.find(c => c.id === product.categoryId)?.name || product.categoryId;
 
@@ -393,6 +410,80 @@ export default function MenuManager({
               );
             })}
           </div>
+
+          {/* Pagination Bar for Menu Manager */}
+          {filteredProducts.length > 0 && (
+            <div className="pt-3 border-t border-stone-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs bg-white p-3.5 rounded-2xl shadow-xs">
+              <div className="flex items-center gap-2 text-stone-500">
+                <span>Tampilkan:</span>
+                <select
+                  value={prodPerPage}
+                  onChange={(e) => {
+                    const val = e.target.value === 'all' ? 'all' : Number(e.target.value);
+                    setProdPerPage(val);
+                    setProdPage(1);
+                  }}
+                  className="px-2 py-1 bg-stone-50 border border-stone-200 rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value={12}>12</option>
+                  <option value={24}>24</option>
+                  <option value={48}>48</option>
+                  <option value="all">Semua</option>
+                </select>
+                <span>menu per hal</span>
+                <span className="text-stone-300">|</span>
+                <span className="font-medium text-stone-600">
+                  {prodStartIndex + 1} - {prodEndIndex} dari {filteredProducts.length} menu
+                </span>
+              </div>
+
+              {totalProdPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={safeProdPage <= 1}
+                    onClick={() => setProdPage(1)}
+                    title="Halaman Pertama"
+                    className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                  >
+                    <ChevronsLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={safeProdPage <= 1}
+                    onClick={() => setProdPage(p => Math.max(1, p - 1))}
+                    title="Halaman Sebelumnya"
+                    className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+
+                  <span className="px-3 py-1 font-bold text-stone-700 bg-stone-100 rounded-lg text-xs">
+                    Hal {safeProdPage} / {totalProdPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={safeProdPage >= totalProdPages}
+                    onClick={() => setProdPage(p => Math.min(totalProdPages, p + 1))}
+                    title="Halaman Selanjutnya"
+                    className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={safeProdPage >= totalProdPages}
+                    onClick={() => setProdPage(totalProdPages)}
+                    title="Halaman Terakhir"
+                    className="p-1.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-100 disabled:opacity-40 disabled:hover:bg-white text-stone-700 transition-colors"
+                  >
+                    <ChevronsRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

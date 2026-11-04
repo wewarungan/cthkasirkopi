@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Plus, Edit2, Trash2, Image, Check, AlertCircle, Coffee, Eye, EyeOff, 
   Link, Upload, X, Layers, Tag, CupSoda, Flame, Milk, Cookie, Sparkles, PlusCircle, GlassWater,
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Camera, HelpCircle
 } from 'lucide-react';
 import { formatDriveImageUrl } from '../services/defaultData';
 import { useNotification } from '../context/NotificationContext';
@@ -720,9 +720,34 @@ export default function MenuManager({
               </div>
 
               {/* Foto Menu Options */}
-              <div className="space-y-2 p-3 bg-stone-50 rounded-2xl border border-stone-200">
-                <label className="block font-semibold text-stone-700">Foto Menu</label>
-                
+              <div className="space-y-3 p-3 sm:p-3.5 bg-stone-50 rounded-2xl border border-stone-200">
+                <div className="flex items-center justify-between">
+                  <label className="block font-semibold text-stone-800 text-xs sm:text-sm">Foto Menu</label>
+                  <span className="text-[10px] sm:text-[11px] font-bold text-amber-900 bg-amber-100/90 border border-amber-300/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span>Format: Kotak 1:1</span>
+                  </span>
+                </div>
+
+                {/* Panduan Resmi Ukuran & Foto Menu */}
+                <div className="p-2.5 sm:p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-xs space-y-1.5 text-stone-700">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-950 text-[11px] sm:text-xs">
+                    <Camera className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span>Petunjuk Foto Produk (Biar Pas & Tidak Terpotong):</span>
+                  </div>
+                  <ul className="text-[11px] space-y-1 text-stone-600 pl-4 list-disc">
+                    <li>
+                      <strong>Rasio Persegi / Kotak (1:1):</strong> Paling ideal! Aktifkan mode <em>"1:1 / Square"</em> di kamera HP sebelum memotret.
+                    </li>
+                    <li>
+                      <strong>Ukuran Ideal:</strong> <strong>600 × 600 px</strong> s/d <strong>800 × 800 px</strong> (Maksimal 1 MB, format JPG/PNG/WEBP).
+                    </li>
+                    <li>
+                      <strong>Posisi Objek:</strong> Taruh cangkir kopi atau piring di <strong>tengah (center)</strong> dengan sedikit jarak kosong di tepian agar tampak utuh.
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Toggle Input Mode */}
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -775,13 +800,19 @@ export default function MenuManager({
                 )}
 
                 {previewImage && (
-                  <div className="flex items-center gap-2 pt-1">
-                    <img
-                      src={previewImage}
-                      alt="Pratinjau"
-                      className="w-14 h-14 object-cover rounded-lg border border-stone-300 shadow-2xs"
-                    />
-                    <span className="text-[11px] text-stone-500">Pratinjau foto siap tampil</span>
+                  <div className="flex items-center gap-3 pt-1 p-2 bg-white rounded-xl border border-stone-200">
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 aspect-square rounded-xl overflow-hidden bg-stone-100 border border-stone-200 shadow-2xs shrink-0">
+                      <img
+                        src={previewImage}
+                        alt="Pratinjau"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <p className="text-xs font-bold text-stone-800">Pratinjau Kotak 1:1</p>
+                      <p className="text-[11px] text-emerald-700 font-medium">✓ Proporsional di Kasir & Menu</p>
+                      <p className="text-[10px] text-stone-400">Pastikan objek berada di tengah bingkai</p>
+                    </div>
                   </div>
                 )}
               </div>

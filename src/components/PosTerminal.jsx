@@ -183,8 +183,8 @@ export default function PosTerminal({
                       : 'cursor-pointer active:scale-[0.98]'
                   }`}
                 >
-                  {/* Fixed Uniform Image & Placeholder Container */}
-                  <div className="relative h-24 sm:h-28 lg:h-32 w-full bg-gradient-to-br from-stone-100 via-[#f8f5f0] to-stone-200/60 overflow-hidden shrink-0">
+                  {/* Fixed Uniform Image & Placeholder Container (Square 1:1 Standard) */}
+                  <div className="relative w-full aspect-square bg-gradient-to-br from-stone-100 via-[#f8f5f0] to-stone-200/60 overflow-hidden shrink-0">
                     {formattedImg ? (
                       <img
                         src={formattedImg}
@@ -198,7 +198,7 @@ export default function PosTerminal({
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-amber-800/50 bg-gradient-to-br from-amber-50/40 via-stone-100 to-amber-100/30 select-none">
-                        <Coffee className="w-7 h-7 sm:w-8 sm:h-8 stroke-[1.8]" />
+                        <Coffee className="w-8 h-8 sm:w-10 sm:h-10 stroke-[1.8]" />
                       </div>
                     )}
 

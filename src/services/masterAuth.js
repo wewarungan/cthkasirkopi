@@ -126,3 +126,33 @@ export async function authenticateWithMaster(idKafe, password) {
     };
   }
 }
+
+/**
+ * Cek apakah perangkat ini masih sah di Master Spreadsheet
+ */
+export async function verifyDeviceWithMaster(idKafe, deviceId) {
+  if (!idKafe || !deviceId) return { valid: true };
+
+  try {
+    const payload = {
+      action: 'VERIFY_DEVICE',
+      idKafe: idKafe,
+      deviceId: deviceId
+    };
+
+    const response = await fetch(MASTER_GAS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (err) {
+    // Jika offline, izinkan jualan sementara (Offline-First)
+    console.warn('Verifikasi perangkat offline, diizinkan sementara:', err);
+    return { valid: true, offline: true };
+  }
+}

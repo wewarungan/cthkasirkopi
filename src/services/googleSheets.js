@@ -120,4 +120,144 @@ export async function processPendingSync(scriptUrl) {
   return syncedCount;
 }
 
+/**
+ * Ambil daftar transaksi dari Google Sheets (untuk ditampilkan di Laptop Owner)
+ */
+export async function fetchCloudTransactions(scriptUrl) {
+  if (!scriptUrl || !scriptUrl.startsWith('https://script.google.com')) return [];
+  try {
+    const url = new URL(scriptUrl);
+    url.searchParams.append('action', 'GET_TRANSACTIONS');
+    const res = await fetch(url.toString());
+    const json = await res.json();
+    if (json.status === 'OK' && Array.isArray(json.data)) {
+      return json.data.map(item => ({
+        ...item,
+        items: typeof item.itemsSummary === 'string'
+          ? item.itemsSummary.split(', ').map(part => {
+              const m = part.match(/^(.*?)\s*\(x(\d+)\)/);
+              return m ? { name: m[1], qty: parseInt(m[2], 10) } : { name: part, qty: 1 };
+            })
+          : []
+      }));
+    }
+    return [];
+  } catch (err) {
+    console.warn('Gagal menarik transaksi dari cloud:', err);
+    return [];
+  }
+}
+
+/**
+ * Catat Kas Keluar ke Google Sheets
+ */
+export async function syncExpenseToGoogleSheets(scriptUrl, expense) {
+  if (!scriptUrl || !scriptUrl.startsWith('https://script.google.com')) return false;
+  try {
+    const payload = { action: 'ADD_EXPENSE', data: expense };
+    await fetch(scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (e) {
+    console.warn('Gagal sinkron kas keluar ke cloud:', e);
+    return false;
+  }
+}
+
+/**
+ * Ambil Kas Keluar dari Google Sheets
+ */
+export async function fetchCloudExpenses(scriptUrl) {
+  if (!scriptUrl || !scriptUrl.startsWith('https://script.google.com')) return [];
+  try {
+    const url = new URL(scriptUrl);
+    url.searchParams.append('action', 'GET_EXPENSES');
+    const res = await fetch(url.toString());
+    const json = await res.json();
+    if (json.status === 'OK' && Array.isArray(json.data)) {
+      return json.data;
+    }
+    return [];
+  } catch (e) {
+    console.warn('Gagal mengambil kas keluar dari cloud:', e);
+    return [];
+  }
+}
+
+/**
+ * Sinkronkan Katalog Menu ke Google Sheets
+ */
+export async function syncMenuToGoogleSheets(scriptUrl, products) {
+  if (!scriptUrl || !scriptUrl.startsWith('https://script.google.com')) return false;
+  try {
+    const payload = { action: 'SYNC_MENU', products };
+    await fetch(scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (e) {
+    console.warn('Gagal sinkron menu ke cloud:', e);
+    return false;
+  }
+}
+
+/**
+ * Ambil Katalog Menu dari Google Sheets
+ */
+export async function fetchCloudMenu(scriptUrl) {
+  if (!scriptUrl || !scriptUrl.startsWith('https://script.google.com')) return [];
+  try {
+    const url = new URL(scriptUrl);
+    url.searchParams.append('action', 'GET_MENU');
+    const res = await fetch(url.toString());
+    const json = await res.json();
+    if (json.status === 'OK' && Array.isArray(json.data) && json.data.length > 0) {
+      return json.data;
+    }
+    return [];
+  } catch (e) {
+    console.warn('Gagal mengambil menu dari cloud:', e);
+    return [];
+  }
+}
+
+/**
+ * Sinkron Meja Aktif (Open Tables)
+ */
+export async function syncOpenTablesToGoogleSheets(scriptUrl, openTables) {
+  if (!scriptUrl || !scriptUrl.startsWith('https://script.google.com')) return false;
+  try {
+    const payload = { action: 'SYNC_OPEN_TABLES', openTables };
+    await fetch(scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function fetchCloudOpenTables(scriptUrl) {
+  if (!scriptUrl || !scriptUrl.startsWith('https://script.google.com')) return [];
+  try {
+    const url = new URL(scriptUrl);
+    url.searchParams.append('action', 'GET_OPEN_TABLES');
+    const res = await fetch(url.toString());
+    const json = await res.json();
+    if (json.status === 'OK' && Array.isArray(json.data)) {
+      return json.data;
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
 export { STORAGE_KEYS };

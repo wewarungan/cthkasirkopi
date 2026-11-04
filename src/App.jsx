@@ -14,7 +14,13 @@ import LoginModal from './components/LoginModal';
 import ExpenseModal from './components/ExpenseModal';
 import MasterLoginPage from './components/MasterLoginPage';
 import { useNotification } from './context/NotificationContext';
-import { getMasterSession, setMasterSession, clearMasterSession } from './services/masterAuth';
+import { 
+  getMasterSession, 
+  setMasterSession, 
+  clearMasterSession,
+  getOrCreateDeviceId,
+  verifyDeviceWithMaster
+} from './services/masterAuth';
 
 import { 
   INITIAL_CATEGORIES, 
@@ -27,7 +33,14 @@ import {
   getLocalData, 
   setLocalData, 
   syncTransactionToGoogleSheets,
-  processPendingSync
+  processPendingSync,
+  fetchCloudTransactions,
+  syncExpenseToGoogleSheets,
+  fetchCloudExpenses,
+  syncMenuToGoogleSheets,
+  fetchCloudMenu,
+  syncOpenTablesToGoogleSheets,
+  fetchCloudOpenTables
 } from './services/googleSheets';
 
 export default function App() {
@@ -36,10 +49,12 @@ export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState('pos'); // 'pos', 'reports', 'menu', 'settings'
 
+  // Master Kafe Session State
+  const [masterSession, setMasterSessionState] = useState(() => getMasterSession());
+
   // Persistent States with Auto-Sanitizer for Clean Data
   const [products, setProducts] = useState(() => {
     const saved = getLocalData(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
-    // Cek jika ada benturan ID lama (seperti prod-3/prod-4 kembar), bersihkan ke INITIAL_PRODUCTS
     const seen = new Set();
     const hasDup = Array.isArray(saved) && saved.some(p => {
       if (seen.has(p.id)) return true;
@@ -114,13 +129,145 @@ export default function App() {
     setLocalData(STORAGE_KEYS.EXPENSES, expenses);
   }, [expenses]);
 
-  // Periodic offline sync processor
+  // ---------------------------------------------------------------------------
+  // 1. Verifikasi Keabsahan Perangkat ke Master Lisensi (Auto-Kickout jika dihapus)
+  // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (settings.googleScriptUrl) {
-      processPendingSync(settings.googleScriptUrl).then(() => {
-        setPendingSync(getLocalData(STORAGE_KEYS.PENDING_SYNC, []));
-      });
+    if (!masterSession?.idKafe) return;
+
+    let isMounted = true;
+    const verifyDevice = async () => {
+      try {
+        const deviceId = getOrCreateDeviceId();
+        const res = await verifyDeviceWithMaster(masterSession.idKafe, deviceId);
+        if (!isMounted) return;
+
+        if (res && res.valid === false) {
+          clearMasterSession();
+          setMasterSessionState(null);
+          showAlert(
+            'Akses Perangkat Dicabut',
+            res.message || 'Perangkat ini telah dicabut atau direset dari Master Lisensi Kafe di spreadsheet.',
+            'error'
+          );
+        }
+      } catch (err) {
+        // Offline-First: Izinkan kasir tetap jualan jika internet putus sementara
+        console.warn('Verifikasi perangkat offline (diizinkan):', err);
+      }
+    };
+
+    verifyDevice();
+    const timer = setInterval(verifyDevice, 60000); // Cek setiap 60 detik
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [masterSession?.idKafe]);
+
+  // ---------------------------------------------------------------------------
+  // 2. Sinkronisasi Penuh Multi-Device Cloud (Push & Pull)
+  // ---------------------------------------------------------------------------
+  const syncAllCloudData = async ({ silent = true } = {}) => {
+    if (!settings.googleScriptUrl) return;
+
+    try {
+      // A. Kirim transaksi offline yang tertunda
+      await processPendingSync(settings.googleScriptUrl);
+      setPendingSync(getLocalData(STORAGE_KEYS.PENDING_SYNC, []));
+
+      // B. Tarik transaksi dari cloud (agar Laptop Owner melihat transaksi HP Kasir)
+      const cloudTx = await fetchCloudTransactions(settings.googleScriptUrl);
+      if (Array.isArray(cloudTx) && cloudTx.length > 0) {
+        setTransactions(prevLocal => {
+          const map = new Map();
+          cloudTx.forEach(t => map.set(t.invoiceNumber, t));
+          // Pertahankan detail lokal jika ada
+          prevLocal.forEach(t => {
+            if (map.has(t.invoiceNumber)) {
+              const c = map.get(t.invoiceNumber);
+              map.set(t.invoiceNumber, {
+                ...c,
+                items: (t.items && t.items.length > 0) ? t.items : c.items,
+                dailyIndex: t.dailyIndex || c.dailyIndex,
+                queueNumber: t.queueNumber || c.queueNumber,
+              });
+            } else {
+              map.set(t.invoiceNumber, t);
+            }
+          });
+
+          return Array.from(map.values()).sort((a, b) => {
+            const timeA = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00:00'}`).getTime();
+            const timeB = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00:00'}`).getTime();
+            return timeB - timeA;
+          });
+        });
+      }
+
+      // C. Tarik katalog menu dari cloud jika ada update harga dari Laptop Owner
+      const cloudMenu = await fetchCloudMenu(settings.googleScriptUrl);
+      if (Array.isArray(cloudMenu) && cloudMenu.length > 0) {
+        setProducts(prevLocal => {
+          const cMap = new Map();
+          cloudMenu.forEach(p => cMap.set(p.id, p));
+          const updated = prevLocal.map(lp => {
+            if (cMap.has(lp.id)) {
+              const cp = cMap.get(lp.id);
+              cMap.delete(lp.id);
+              return { ...lp, ...cp };
+            }
+            return lp;
+          });
+          cMap.forEach(cp => updated.push(cp));
+          return updated;
+        });
+      }
+
+      // D. Tarik kas keluar (pengeluaran petty cash) dari cloud
+      const cloudExpenses = await fetchCloudExpenses(settings.googleScriptUrl);
+      if (Array.isArray(cloudExpenses) && cloudExpenses.length > 0) {
+        setExpenses(prevLocal => {
+          const expMap = new Map();
+          cloudExpenses.forEach(e => expMap.set(e.id, e));
+          prevLocal.forEach(e => {
+            if (!expMap.has(e.id)) expMap.set(e.id, e);
+          });
+          return Array.from(expMap.values()).sort((a, b) => {
+            const timeA = new Date(`${a.date || '1970-01-01'}T${a.time || '00:00:00'}`).getTime();
+            const timeB = new Date(`${b.date || '1970-01-01'}T${b.time || '00:00:00'}`).getTime();
+            return timeB - timeA;
+          });
+        });
+      }
+
+      // E. Tarik meja aktif (Open Table) dari cloud
+      const cloudTables = await fetchCloudOpenTables(settings.googleScriptUrl);
+      if (Array.isArray(cloudTables) && cloudTables.length > 0) {
+        setOpenTables(cloudTables);
+      }
+
+      if (!silent) {
+        showToast('Sinkronisasi Cloud Berhasil! Semua data telah mutakhir.', 'success');
+      }
+    } catch (err) {
+      console.warn('Gagal sinkronisasi data cloud:', err);
+      if (!silent) {
+        showToast('Gagal sinkronisasi: ' + (err.message || 'Koneksi internet bermasalah'), 'error');
+      }
     }
+  };
+
+  // Background Cloud Sync setiap 60 detik
+  useEffect(() => {
+    if (!settings.googleScriptUrl) return;
+
+    syncAllCloudData({ silent: true });
+    const syncInterval = setInterval(() => {
+      syncAllCloudData({ silent: true });
+    }, 60000);
+
+    return () => clearInterval(syncInterval);
   }, [settings.googleScriptUrl]);
 
   // Add item to cart
@@ -199,7 +346,7 @@ export default function App() {
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
-    // Generate Invoice Number: KK + 8 digits (matching KK85762642 from reference)
+    // Generate Invoice Number: KK + 8 digits
     const prefix = settings?.invoicePrefix || 'KK';
     const randomSuffix = Math.floor(10000000 + Math.random() * 90000000);
     const invoiceNumber = `${prefix}${randomSuffix}`;
@@ -245,30 +392,47 @@ export default function App() {
     setIsReceiptOpen(true);
   };
 
-  // Product CRUD
+  // Product CRUD dengan Cloud Sync Otomatis
   const handleSaveProduct = (productData) => {
     setProducts(prev => {
       const idx = prev.findIndex(p => p.id === productData.id);
+      let updated;
       if (idx > -1) {
-        const copy = [...prev];
-        copy[idx] = productData;
-        return copy;
+        updated = [...prev];
+        updated[idx] = productData;
+      } else {
+        updated = [productData, ...prev];
       }
-      return [productData, ...prev];
+      if (settings.googleScriptUrl) {
+        syncMenuToGoogleSheets(settings.googleScriptUrl, updated);
+      }
+      return updated;
     });
   };
 
   const handleDeleteProduct = (productId) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
+    setProducts(prev => {
+      const updated = prev.filter(p => p.id !== productId);
+      if (settings.googleScriptUrl) {
+        syncMenuToGoogleSheets(settings.googleScriptUrl, updated);
+      }
+      return updated;
+    });
   };
 
   const handleToggleAvailability = (productId) => {
-    setProducts(prev => prev.map(p => {
-      if (p.id === productId) {
-        return { ...p, isAvailable: p.isAvailable === false ? true : false };
+    setProducts(prev => {
+      const updated = prev.map(p => {
+        if (p.id === productId) {
+          return { ...p, isAvailable: p.isAvailable === false ? true : false };
+        }
+        return p;
+      });
+      if (settings.googleScriptUrl) {
+        syncMenuToGoogleSheets(settings.googleScriptUrl, updated);
       }
-      return p;
-    }));
+      return updated;
+    });
   };
 
   // Category CRUD
@@ -338,7 +502,7 @@ export default function App() {
     }
   };
 
-  // Open Table (Simpan Meja / Bayar Nanti)
+  // Open Table (Simpan Meja / Bayar Nanti) dengan Cloud Sync
   const handleSaveOpenTable = (orderData) => {
     if (!cartItems.length) {
       showAlert('Keranjang Kosong', 'Pilih minimal satu menu sebelum menyimpan meja!', 'warning');
@@ -350,6 +514,7 @@ export default function App() {
     
     const newOpenTable = {
       id: `table-${Date.now()}`,
+      tableName: tableName,
       customerName: tableName,
       tableNumber: tableName,
       orderType,
@@ -357,12 +522,19 @@ export default function App() {
       subtotal,
       discount,
       total: totalAmount,
+      totalAmount: totalAmount,
       savedAtTime: timeStr,
       time: timeStr,
       savedBy: currentUser?.name || 'Kasir',
+      cashier: currentUser?.name || 'Kasir',
     };
 
-    setOpenTables(prev => [newOpenTable, ...prev]);
+    const nextTables = [newOpenTable, ...openTables];
+    setOpenTables(nextTables);
+    if (settings.googleScriptUrl) {
+      syncOpenTablesToGoogleSheets(settings.googleScriptUrl, nextTables);
+    }
+
     handleClearCart();
     setIsMobileCartOpen(false);
     showToast(`Pesanan "${tableName}" berhasil disimpan ke Meja Aktif!`, 'success');
@@ -370,16 +542,25 @@ export default function App() {
 
   const handleLoadOpenTable = (tableOrder) => {
     setCartItems(tableOrder.items || []);
-    setCustomerName(tableOrder.customerName || '');
+    setCustomerName(tableOrder.customerName || tableOrder.tableName || '');
     setOrderType(tableOrder.orderType || 'Dine In');
     setDiscount(tableOrder.discount || 0);
+    
     // Hapus dari daftar meja aktif karena sudah dibuka kembali
-    setOpenTables(prev => prev.filter(t => t.id !== tableOrder.id));
+    const nextTables = openTables.filter(t => t.id !== tableOrder.id);
+    setOpenTables(nextTables);
+    if (settings.googleScriptUrl) {
+      syncOpenTablesToGoogleSheets(settings.googleScriptUrl, nextTables);
+    }
     setIsOpenTablesModalOpen(false);
   };
 
   const handleCancelOpenTable = (tableId) => {
-    setOpenTables(prev => prev.filter(t => t.id !== tableId));
+    const nextTables = openTables.filter(t => t.id !== tableId);
+    setOpenTables(nextTables);
+    if (settings.googleScriptUrl) {
+      syncOpenTablesToGoogleSheets(settings.googleScriptUrl, nextTables);
+    }
   };
 
   // User Management
@@ -409,9 +590,12 @@ export default function App() {
     setIsLoginModalOpen(false);
   };
 
-  // Expense Management (Petty Cash / Kas Keluar)
+  // Expense Management (Petty Cash / Kas Keluar) dengan Cloud Sync
   const handleSaveExpense = (expenseData) => {
     setExpenses(prev => [expenseData, ...prev]);
+    if (settings.googleScriptUrl) {
+      syncExpenseToGoogleSheets(settings.googleScriptUrl, expenseData);
+    }
   };
 
   const handleDeleteExpense = (expenseId) => {
@@ -430,20 +614,18 @@ export default function App() {
     showToast('Seluruh data berhasil direset kembali ke setelan awal!', 'success');
   };
 
-  // Master Kafe Session State
-  const [masterSession, setMasterSessionState] = useState(() => getMasterSession());
-
   // Handle Master Kafe Login
   const handleMasterLoginSuccess = (sessionData) => {
     setMasterSession(sessionData);
     setMasterSessionState(sessionData);
 
     // Otomatis atur nama kafe dan link database Google Sheets dari Master
-    setSettings(prev => ({
-      ...prev,
-      storeName: sessionData.namaKafe || prev.storeName,
-      googleScriptUrl: sessionData.linkGasKafe || prev.googleScriptUrl
-    }));
+    const newSettings = {
+      ...settings,
+      storeName: sessionData.namaKafe || settings.storeName,
+      googleScriptUrl: sessionData.linkGasKafe || settings.googleScriptUrl
+    };
+    setSettings(newSettings);
 
     // Tentukan role pengguna awal
     if (sessionData.role === 'owner') {
@@ -455,6 +637,11 @@ export default function App() {
     }
 
     showToast(`Selamat datang di ${sessionData.namaKafe}!`, 'success');
+
+    // Langsung tarik data cloud kafe ini
+    if (sessionData.linkGasKafe) {
+      syncAllCloudData({ silent: true });
+    }
   };
 
   const handleLogoutKafe = () => {
@@ -473,12 +660,33 @@ export default function App() {
     });
   };
 
-  // Manual sync trigger
+  // Manual sync trigger (Tombol Sinkronisasi Sekarang di Navbar)
   const handleSyncNow = async () => {
-    if (!settings.googleScriptUrl) return;
+    if (!settings.googleScriptUrl) {
+      showAlert('Koneksi Cloud Belum Disetel', 'Link Google Apps Script Kafe belum terkonfigurasi di Pengaturan.', 'warning');
+      return;
+    }
     setIsSyncing(true);
-    await processPendingSync(settings.googleScriptUrl);
-    setPendingSync(getLocalData(STORAGE_KEYS.PENDING_SYNC, []));
+
+    // 1. Verifikasi lisensi & perangkat terlebih dahulu ke Master
+    if (masterSession?.idKafe) {
+      const deviceId = getOrCreateDeviceId();
+      const verifyRes = await verifyDeviceWithMaster(masterSession.idKafe, deviceId);
+      if (verifyRes && verifyRes.valid === false) {
+        setIsSyncing(false);
+        clearMasterSession();
+        setMasterSessionState(null);
+        showAlert(
+          'Akses Perangkat Dicabut',
+          verifyRes.message || 'Perangkat ini telah dicabut atau direset dari Master Lisensi Kafe di spreadsheet.',
+          'error'
+        );
+        return;
+      }
+    }
+
+    // 2. Jalankan sinkronisasi data cloud
+    await syncAllCloudData({ silent: false });
     setIsSyncing(false);
   };
 
@@ -541,11 +749,11 @@ export default function App() {
               />
             </div>
 
-            {/* Mobile Floating Round Cart Button (Dinaikkan agar berada di atas BottomNav) */}
+            {/* Mobile Floating Round Cart Button */}
             {cartItems.length > 0 && !isMobileCartOpen && (
               <button
                 onClick={() => setIsMobileCartOpen(true)}
-                className="lg:hidden fixed bottom-20 right-4 sm:right-6 w-14 h-14 bg-[#5c3a21] text-white rounded-full shadow-2xl flex items-center justify-center z-30 active:scale-95 transition-all hover:bg-[#4a2e1a]"
+                className="lg:hidden fixed bottom-20 right-4 sm:right-6 w-14 h-14 bg-[#5c3a21] text-white rounded-full shadow-2xl flex items-center justify-center z-30 active:scale-95 transition-all hover:bg-[#4a2e1a] cursor-pointer"
                 aria-label="Keranjang"
               >
                 <ShoppingCart className="w-6 h-6" />
@@ -635,7 +843,7 @@ export default function App() {
         )}
       </div>
 
-      {/* Mobile Bottom Navigation Bar (Tab Menu Bawah untuk HP) */}
+      {/* Mobile Bottom Navigation Bar */}
       <BottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}

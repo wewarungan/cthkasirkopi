@@ -148,7 +148,12 @@ function doPost(e) {
       return handleLoginKafe(payload);
     }
 
-    // 2. ACTION: RESET_DEVICES (Jika Owner ganti HP dan ingin hapus daftar HP lama)
+    // 2. ACTION: VERIFY_DEVICE (Cek apakah perangkat masih sah atau sudah dihapus di spreadsheet)
+    if (action === 'VERIFY_DEVICE') {
+      return handleVerifyDevice(payload);
+    }
+
+    // 3. ACTION: RESET_DEVICES (Jika Owner ganti HP dan ingin hapus daftar HP lama)
     if (action === 'RESET_DEVICES') {
       return handleResetDevices(payload);
     }
@@ -309,6 +314,66 @@ function handleResetDevices(data) {
   }
 
   return createJsonResponse({ success: false, message: 'ID Kafe tidak ditemukan.' });
+}
+
+/**
+ * Verifikasi apakah perangkat ini masih terdaftar di Kolom J spreadsheet
+ */
+function handleVerifyDevice(data) {
+  const idKafe = String(data.idKafe || '').trim().toLowerCase();
+  const deviceId = String(data.deviceId || '').trim();
+
+  if (!idKafe || !deviceId) {
+    return createJsonResponse({ valid: false, message: 'ID Kafe dan Device ID diperlukan.' });
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return createJsonResponse({ valid: false, message: 'Sheet tidak ditemukan.' });
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]).toLowerCase().trim() === idKafe) {
+      const statusLisensi = String(values[i][6]).toUpperCase().trim();
+      const tglExpired = values[i][7];
+      const registeredDevicesStr = String(values[i][9] || '').trim();
+
+      // 1. Cek Status
+      if (statusLisensi !== 'AKTIF') {
+        return createJsonResponse({ valid: false, message: 'Akun kafe Anda sedang dinonaktifkan oleh Admin.' });
+      }
+
+      // 2. Cek Tanggal Kadaluarsa
+      if (tglExpired && String(tglExpired).toUpperCase() !== 'LIFETIME') {
+        const exp = new Date(tglExpired);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (!isNaN(exp.getTime()) && today > exp) {
+          return createJsonResponse({ valid: false, message: 'Masa aktif lisensi telah berakhir.' });
+        }
+      }
+
+      // 3. Cek apakah deviceId masih ada di Kolom J
+      const deviceList = registeredDevicesStr ? registeredDevicesStr.split('|').map(s => s.trim()).filter(Boolean) : [];
+      const isDeviceRegistered = deviceList.some(item => item.startsWith(deviceId));
+
+      if (!isDeviceRegistered) {
+        return createJsonResponse({ 
+          valid: false, 
+          message: 'Akses perangkat ini telah dicabut atau direset oleh Admin di spreadsheet.' 
+        });
+      }
+
+      return createJsonResponse({ 
+        valid: true, 
+        message: 'Perangkat sah.',
+        namaKafe: values[i][3],
+        linkGasKafe: values[i][4]
+      });
+    }
+  }
+
+  return createJsonResponse({ valid: false, message: 'ID Kafe tidak terdaftar.' });
 }
 
 // Helper output JSON

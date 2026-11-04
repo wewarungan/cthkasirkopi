@@ -282,8 +282,8 @@ export default function PosTerminal({
             })}
           </div>
         ) : (
-          /* TAMPILAN GRID (Kartu Kompak dengan Foto Proporsional, Tidak Lagi Raksasa) */
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3.5 lg:gap-4">
+          /* TAMPILAN GRID (Foto Kotak Sempurna 1:1, Proporsional di HP & Laptop) */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5 sm:gap-3.5 lg:gap-4">
             {filteredProducts.map((product) => {
               const cartQty = getProductCartQty(product.id);
               const formattedImg = formatDriveImageUrl(product.imageUrl);
@@ -298,8 +298,8 @@ export default function PosTerminal({
                       : 'cursor-pointer active:scale-[0.98]'
                   }`}
                 >
-                  {/* Foto Menu Kompak & Proporsional (Tinggi Terkendali) */}
-                  <div className="relative w-full h-24 xs:h-28 sm:h-32 md:h-36 bg-gradient-to-br from-stone-100 via-[#f8f5f0] to-stone-200/60 overflow-hidden shrink-0">
+                  {/* Foto Menu Kotak Sempurna 1:1 (Aspect-Square) */}
+                  <div className="relative w-full aspect-square bg-gradient-to-br from-stone-100 via-[#f8f5f0] to-stone-200/60 overflow-hidden shrink-0">
                     {formattedImg ? (
                       <img
                         src={formattedImg}

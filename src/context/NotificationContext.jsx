@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { AlertCircle, CheckCircle2, Info, Trash2, X, AlertTriangle } from 'lucide-react';
 
 const NotificationContext = createContext(null);
@@ -80,6 +80,31 @@ export function NotificationProvider({ children }) {
   const closeDialog = useCallback(() => {
     setDialog(null);
   }, []);
+
+  // Tangani Tombol Back HP saat Dialog/Modal Konfirmasi Terbuka
+  const isBackTriggeredByPopState = useRef(false);
+
+  useEffect(() => {
+    if (dialog?.isOpen) {
+      window.history.pushState({ notifDialog: true }, '');
+
+      const handlePop = () => {
+        isBackTriggeredByPopState.current = true;
+        setDialog(null);
+        setTimeout(() => {
+          isBackTriggeredByPopState.current = false;
+        }, 60);
+      };
+
+      window.addEventListener('popstate', handlePop, { once: true });
+      return () => {
+        window.removeEventListener('popstate', handlePop);
+        if (!isBackTriggeredByPopState.current && window.history.state?.notifDialog) {
+          window.history.back();
+        }
+      };
+    }
+  }, [dialog?.isOpen]);
 
   return (
     <NotificationContext.Provider value={{ showToast, showAlert, showConfirm }}>

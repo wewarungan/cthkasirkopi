@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
@@ -128,6 +128,116 @@ export default function App() {
   useEffect(() => {
     setLocalData(STORAGE_KEYS.EXPENSES, expenses);
   }, [expenses]);
+
+  // ---------------------------------------------------------------------------
+  // KENDALI TOMBOL BACK NAVIGASI HP (Hardware & Gesture Back Button Interceptor)
+  // ---------------------------------------------------------------------------
+  const isBackTriggeredByPopState = useRef(false);
+
+  // Inisialisasi base state awal agar browser memiliki anchor
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (!window.history.state || !window.history.state.posBase)) {
+      window.history.replaceState({ posBase: true }, '');
+    }
+  }, []);
+
+  // Tangani event popstate saat tombol Back di HP ditekan
+  useEffect(() => {
+    const handlePopState = () => {
+      isBackTriggeredByPopState.current = true;
+
+      // 1. Prioritas Utama: Tutup Modal-modal yang sedang terbuka
+      if (isReceiptOpen) {
+        setIsReceiptOpen(false);
+      } else if (isPaymentOpen) {
+        setIsPaymentOpen(false);
+      } else if (isOpenTablesModalOpen) {
+        setIsOpenTablesModalOpen(false);
+      } else if (isExpenseModalOpen) {
+        setIsExpenseModalOpen(false);
+      } else if (isLoginModalOpen) {
+        setIsLoginModalOpen(false);
+      } else if (isMobileCartOpen) {
+        // 2. Prioritas Kedua: Tutup Keranjang Geser Mobile
+        setIsMobileCartOpen(false);
+      } else if (activeTab !== 'pos') {
+        // 3. Prioritas Ketiga: Kembali ke Tab Kasir Utama (POS)
+        setActiveTab('pos');
+      }
+
+      setTimeout(() => {
+        isBackTriggeredByPopState.current = false;
+      }, 80);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [
+    isReceiptOpen,
+    isPaymentOpen,
+    isOpenTablesModalOpen,
+    isExpenseModalOpen,
+    isLoginModalOpen,
+    isMobileCartOpen,
+    activeTab
+  ]);
+
+  // Push history state saat overlay/modal dibuka, dan pop saat ditutup lewat tombol UI
+  useEffect(() => {
+    if (isMobileCartOpen) {
+      window.history.pushState({ posOverlay: 'cart' }, '');
+    } else if (!isBackTriggeredByPopState.current && window.history.state?.posOverlay === 'cart') {
+      window.history.back();
+    }
+  }, [isMobileCartOpen]);
+
+  useEffect(() => {
+    if (isPaymentOpen) {
+      window.history.pushState({ posOverlay: 'payment' }, '');
+    } else if (!isBackTriggeredByPopState.current && window.history.state?.posOverlay === 'payment') {
+      window.history.back();
+    }
+  }, [isPaymentOpen]);
+
+  useEffect(() => {
+    if (isReceiptOpen) {
+      window.history.pushState({ posOverlay: 'receipt' }, '');
+    } else if (!isBackTriggeredByPopState.current && window.history.state?.posOverlay === 'receipt') {
+      window.history.back();
+    }
+  }, [isReceiptOpen]);
+
+  useEffect(() => {
+    if (isOpenTablesModalOpen) {
+      window.history.pushState({ posOverlay: 'tables' }, '');
+    } else if (!isBackTriggeredByPopState.current && window.history.state?.posOverlay === 'tables') {
+      window.history.back();
+    }
+  }, [isOpenTablesModalOpen]);
+
+  useEffect(() => {
+    if (isExpenseModalOpen) {
+      window.history.pushState({ posOverlay: 'expense' }, '');
+    } else if (!isBackTriggeredByPopState.current && window.history.state?.posOverlay === 'expense') {
+      window.history.back();
+    }
+  }, [isExpenseModalOpen]);
+
+  useEffect(() => {
+    if (isLoginModalOpen) {
+      window.history.pushState({ posOverlay: 'login' }, '');
+    } else if (!isBackTriggeredByPopState.current && window.history.state?.posOverlay === 'login') {
+      window.history.back();
+    }
+  }, [isLoginModalOpen]);
+
+  useEffect(() => {
+    if (activeTab !== 'pos') {
+      window.history.pushState({ posOverlay: `tab-${activeTab}` }, '');
+    } else if (!isBackTriggeredByPopState.current && window.history.state?.posOverlay?.startsWith('tab-')) {
+      window.history.back();
+    }
+  }, [activeTab]);
 
   // ---------------------------------------------------------------------------
   // 1. Verifikasi Keabsahan Perangkat ke Master Lisensi (Auto-Kickout jika dihapus)

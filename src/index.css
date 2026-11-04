@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Global Dark Mode Overrides */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #171412 !important;
+  color: #f5f0eb !important;
+}
+
+html.dark header,
+html.dark aside,
+html.dark nav,
+html.dark main {
+  background-color: #211c19 !important;
+  border-color: #38312b !important;
+  color: #f5f0eb !important;
+}
+
+html.dark .bg-stone-100,
+html.dark .bg-stone-50,
+html.dark .bg-white,
+html.dark .bg-\[\#fcfaf7\],
+html.dark .bg-\[\#f8f5f0\],
+html.dark .bg-\[\#fdfbf9\] {
+  background-color: #211c19 !important;
+  border-color: #38312b !important;
+  color: #f5f0eb !important;
+}
+
+html.dark .bg-\[\#f3efe9\],
+html.dark .bg-\[\#f6f2ec\],
+html.dark .bg-\[\#ede7df\],
+html.dark .bg-\[\#ede7de\],
+html.dark .bg-\[\#eae4db\],
+html.dark .bg-\[\#f7f3ee\] {
+  background-color: #2c2520 !important;
+  border-color: #423932 !important;
+  color: #f5f0eb !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #2c2520 !important;
+  border-color: #423932 !important;
+  color: #ffffff !important;
+}
+
+html.dark .text-stone-900,
+html.dark .text-stone-800,
+html.dark .text-stone-700 {
+  color: #f5f0eb !important;
+}
+
+html.dark .text-stone-600,
+html.dark .text-stone-500 {
+  color: #c7b8ae !important;
+}
+
+html.dark .border-stone-200,
+html.dark .border-stone-200\/80,
+html.dark .border-stone-200\/90,
+html.dark .border-stone-100 {
+  border-color: #38312b !important;
+}
+
+/* Print thermal styling */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 58mm;
+    margin: 0 auto;
+    padding: 0;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 0;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 9999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #423932;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+}

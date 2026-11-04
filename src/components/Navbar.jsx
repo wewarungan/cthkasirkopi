@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Coffee, ShoppingCart, Sun, Moon, RefreshCw, LogOut, UserCheck, Utensils } from 'lucide-react';
+import { Coffee, ShoppingCart, Sun, Moon, RefreshCw, LogOut, UserCheck, Utensils, Settings } from 'lucide-react';
 
 export default function Navbar({ 
   activeTab, 
@@ -118,17 +118,19 @@ export default function Navbar({
             </button>
           )}
 
-          {/* Pengaturan Tab (Admin & Owner) */}
+          {/* Pengaturan Tab (Admin & Owner) - Icon on mobile, Text on desktop */}
           {canViewSettings && (
             <button
               onClick={() => setActiveTab('settings')}
-              className={`hidden sm:inline-block px-3 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
+              className={`px-2.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-1 ${
                 activeTab === 'settings'
                   ? 'bg-[#5c3a21] text-white shadow-xs'
                   : 'text-stone-600 hover:text-stone-900 hover:bg-[#ede7df]'
               }`}
+              title="Pengaturan Kedai"
             >
-              Pengaturan
+              <Settings className="w-4 h-4 sm:hidden text-stone-700" />
+              <span className="hidden sm:inline">Pengaturan</span>
             </button>
           )}
         </nav>

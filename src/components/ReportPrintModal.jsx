@@ -1,6 +1,6 @@
 import React from 'react';
 import { Printer, Download, X, Coffee, Clock, CreditCard, DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
-import { exportReportToExcel } from '../services/reportExport';
+import { exportReportToExcel, exportReportToPdf } from '../services/reportExport';
 
 export default function ReportPrintModal({
   isOpen,
@@ -53,6 +53,22 @@ export default function ReportPrintModal({
     });
   };
 
+  const handleDownloadPdf = () => {
+    exportReportToPdf({
+      settings,
+      periodLabel,
+      dateRangeStr,
+      currentUser,
+      summary,
+      transactions,
+      expenses,
+      topProducts,
+      paymentStats,
+      peakHourData,
+      orderTypeStats
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
       <div className="bg-[#f5f2eb] dark:bg-[#1a1715] w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[96vh] border border-stone-300 dark:border-stone-800 animate-in zoom-in-95">
@@ -67,7 +83,7 @@ export default function ReportPrintModal({
               </span>
             </h3>
             <p className="text-xs text-stone-500">
-              Dapat langsung dicetak ke kertas A4, disimpan sebagai file PDF, atau diekspor ke Excel multi-sheet.
+              Dapat langsung diunduh ke format PDF & Excel, atau dicetak fisik.
             </p>
           </div>
 
@@ -84,16 +100,26 @@ export default function ReportPrintModal({
               <span className="sm:hidden">Excel</span>
             </button>
 
-            {/* Print / Save PDF Button */}
+            {/* Direct Download PDF Button (1-Click Download) */}
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              className="px-3.5 py-2 rounded-xl bg-[#b05d49] hover:bg-[#974b39] active:scale-[0.98] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all"
+              title="Download File PDF Langsung"
+            >
+              <Download className="w-4 h-4 text-rose-100" />
+              <span className="hidden sm:inline">Download PDF</span>
+              <span className="sm:hidden">PDF</span>
+            </button>
+
+            {/* Print Button */}
             <button
               type="button"
               onClick={handlePrint}
-              className="px-3.5 py-2 rounded-xl bg-[#5c3a21] hover:bg-[#4a2e1a] active:scale-[0.98] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all"
-              title="Cetak Dokumen atau Simpan sebagai PDF"
+              className="p-2 rounded-xl bg-[#ede7df] hover:bg-[#dfd7cc] text-stone-700 active:scale-[0.98] text-xs font-bold transition-all"
+              title="Cetak via Printer"
             >
-              <Printer className="w-4 h-4 text-amber-200" />
-              <span className="hidden sm:inline">Cetak / Simpan PDF</span>
-              <span className="sm:hidden">Cetak</span>
+              <Printer className="w-4 h-4 text-stone-700" />
             </button>
 
             {/* Close Button */}

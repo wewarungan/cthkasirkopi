@@ -7,7 +7,7 @@ import {
   Clock, CreditCard, Download, FileText, ChevronDown
 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
-import { exportReportToExcel } from '../services/reportExport';
+import { exportReportToExcel, exportReportToPdf } from '../services/reportExport';
 import ReportPrintModal from './ReportPrintModal';
 
 export default function ReportsHistory({
@@ -522,10 +522,27 @@ export default function ReportsHistory({
     showToast('File Excel laporan (.xlsx) berhasil diunduh!', 'success');
   };
 
+  const handleExportPdf = () => {
+    exportReportToPdf({
+      settings,
+      periodLabel: getPeriodLabel(),
+      dateRangeStr: getDateRangeStr(),
+      currentUser,
+      summary: summaryData,
+      transactions: filteredTransactions,
+      expenses: filteredExpenses,
+      topProducts,
+      paymentStats,
+      peakHourData,
+      orderTypeStats
+    });
+    showToast('File PDF laporan resmi (.pdf) berhasil diunduh!', 'success');
+  };
+
   return (
     <div className="flex-1 bg-[#f8f5f0] overflow-y-auto p-3.5 sm:p-6 space-y-4 max-w-4xl mx-auto w-full font-sans text-stone-800">
       
-      {/* Title & Top Export Action Buttons */}
+      {/* Title & Top Direct Export Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">
@@ -536,7 +553,7 @@ export default function ReportsHistory({
           </span>
         </div>
 
-        {/* 2 Main Export Action Buttons: Excel (.xlsx) & PDF A4 */}
+        {/* Direct Download Buttons: Excel & PDF (1-Click Langsung Download) */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -550,12 +567,21 @@ export default function ReportsHistory({
 
           <button
             type="button"
+            onClick={handleExportPdf}
+            className="px-3.5 py-2 rounded-xl bg-[#b05d49] hover:bg-[#974b39] active:scale-[0.98] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all"
+            title="Download Dokumen Resmi PDF Langsung (.pdf)"
+          >
+            <Download className="w-4 h-4 text-rose-100" />
+            <span>Download PDF</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsReportModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-[#5c3a21] hover:bg-[#4a2e1a] active:scale-[0.98] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all"
-            title="Buka Pratinjau Dokumen Resmi & Cetak / Simpan PDF A4"
+            className="p-2 rounded-xl bg-[#5c3a21] hover:bg-[#4a2e1a] text-white text-xs font-bold transition-all shadow-xs"
+            title="Lihat Pratinjau Dokumen / Cetak"
           >
             <Printer className="w-4 h-4 text-amber-200" />
-            <span>Cetak / PDF A4</span>
           </button>
         </div>
       </div>

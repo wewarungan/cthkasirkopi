@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import Navbar from './components/Navbar';
+import BottomNav from './components/BottomNav';
 import PosTerminal from './components/PosTerminal';
 import CartSidebar from './components/CartSidebar';
 import PaymentModal from './components/PaymentModal';
@@ -11,7 +12,9 @@ import SettingsModal from './components/SettingsModal';
 import OpenTablesModal from './components/OpenTablesModal';
 import LoginModal from './components/LoginModal';
 import ExpenseModal from './components/ExpenseModal';
+import MasterLoginPage from './components/MasterLoginPage';
 import { useNotification } from './context/NotificationContext';
+import { getMasterSession, setMasterSession, clearMasterSession } from './services/masterAuth';
 
 import { 
   INITIAL_CATEGORIES, 
@@ -427,6 +430,42 @@ export default function App() {
     showToast('Seluruh data berhasil direset kembali ke setelan awal!', 'success');
   };
 
+  // Master Kafe Session State
+  const [masterSession, setMasterSessionState] = useState(() => getMasterSession());
+
+  // Handle Master Kafe Login
+  const handleMasterLoginSuccess = (sessionData) => {
+    setMasterSession(sessionData);
+    setMasterSessionState(sessionData);
+
+    // Otomatis atur nama kafe dan link database Google Sheets dari Master
+    setSettings(prev => ({
+      ...prev,
+      storeName: sessionData.namaKafe || prev.storeName,
+      googleScriptUrl: sessionData.linkGasKafe || prev.googleScriptUrl
+    }));
+
+    // Tentukan role pengguna awal
+    if (sessionData.role === 'owner') {
+      const ownerUser = users.find(u => u.role === 'owner') || { id: 'u-owner', name: 'Owner', role: 'owner', avatar: '👑' };
+      setCurrentUser(ownerUser);
+    } else {
+      const kasirUser = users.find(u => u.role === 'kasir') || { id: 'u-kasir', name: 'Kasir 1', role: 'kasir', avatar: '☕' };
+      setCurrentUser(kasirUser);
+    }
+
+    showToast(`Selamat datang di ${sessionData.namaKafe}!`, 'success');
+  };
+
+  const handleLogoutKafe = () => {
+    showConfirm('Keluar dari Kafe?', 'Anda akan keluar dari sesi kafe ini dan kembali ke halaman login utama.', () => {
+      clearMasterSession();
+      setMasterSessionState(null);
+      setIsLoginModalOpen(false);
+      showToast('Berhasil keluar dari sesi kafe.', 'info');
+    });
+  };
+
   // Manual sync trigger
   const handleSyncNow = async () => {
     if (!settings.googleScriptUrl) return;
@@ -435,6 +474,11 @@ export default function App() {
     setPendingSync(getLocalData(STORAGE_KEYS.PENDING_SYNC, []));
     setIsSyncing(false);
   };
+
+  // Jika belum login ke Master Kafe, tampilkan MasterLoginPage di depan
+  if (!masterSession) {
+    return <MasterLoginPage onLoginSuccess={handleMasterLoginSuccess} />;
+  }
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-stone-100 dark:bg-[#171412] font-sans">
@@ -455,8 +499,8 @@ export default function App() {
         onOpenTableList={() => setIsOpenTablesModalOpen(true)}
       />
 
-      {/* Main View Area */}
-      <div className="flex-1 flex overflow-hidden relative">
+      {/* Main View Area (Beri padding bottom di mobile agar tidak tertutup BottomNav) */}
+      <div className="flex-1 flex overflow-hidden relative pb-14 md:pb-0">
         {activeTab === 'pos' && (
           <main className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden">
             {/* POS Catalog */}
@@ -490,11 +534,11 @@ export default function App() {
               />
             </div>
 
-            {/* Mobile Floating Round Cart Button (Sesuai Foto 5) */}
+            {/* Mobile Floating Round Cart Button (Dinaikkan agar berada di atas BottomNav) */}
             {cartItems.length > 0 && !isMobileCartOpen && (
               <button
                 onClick={() => setIsMobileCartOpen(true)}
-                className="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-[#5c3a21] text-white rounded-full shadow-2xl flex items-center justify-center z-30 active:scale-95 transition-all hover:bg-[#4a2e1a]"
+                className="lg:hidden fixed bottom-20 right-4 sm:right-6 w-14 h-14 bg-[#5c3a21] text-white rounded-full shadow-2xl flex items-center justify-center z-30 active:scale-95 transition-all hover:bg-[#4a2e1a]"
                 aria-label="Keranjang"
               >
                 <ShoppingCart className="w-6 h-6" />
@@ -584,6 +628,13 @@ export default function App() {
         )}
       </div>
 
+      {/* Mobile Bottom Navigation Bar (Tab Menu Bawah untuk HP) */}
+      <BottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        currentUser={currentUser}
+      />
+
       {/* Modal Pembayaran (Tunai & QRIS) */}
       <PaymentModal
         isOpen={isPaymentOpen}
@@ -622,6 +673,7 @@ export default function App() {
         users={users}
         onLoginSuccess={handleLoginSuccess}
         storeName={settings.storeName}
+        onLogoutKafe={handleLogoutKafe}
       />
 
       {/* Modal Catat Kas Keluar (Petty Cash) */}

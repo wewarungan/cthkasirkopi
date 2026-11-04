@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
+  <defs>
+    <linearGradient id="wwGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="roofGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#312e81" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+  </defs>
+
+  <!-- Modern App Icon Badge (Rounded Squircle) -->
+  <g transform="translate(10, 10)">
+    <rect width="60" height="60" rx="16" fill="url(#roofGrad)" />
+    
+    <!-- Stylized Warung Canopy + Tech 'W' -->
+    <!-- Canopy Roof Awning -->
+    <path d="M12 24 C12 24, 18 18, 30 18 C42 18, 48 24, 48 24 L48 28 C48 28, 42 24, 30 24 C18 24, 12 28, 12 28 Z" fill="#fbbf24" />
+    
+    <!-- Bold Tech W with Connected Pillars -->
+    <path d="M16 26 L22 44 L30 30 L38 44 L44 26" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Digital Store Node Dot (Glowing Gold) -->
+    <circle cx="30" cy="22" r="3" fill="#f59e0b" />
+  </g>
+
+  <!-- Brand Typography -->
+  <!-- "We" in Vibrant Indigo/Blue, "Warungan" in Bold Charcoal/White -->
+  <text x="82" y="44" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="900" letter-spacing="-0.5">
+    <tspan fill="#4f46e5">We</tspan><tspan fill="#1e293b" class="ww-text">Warungan</tspan>
+  </text>
+  
+  <!-- Company Tagline -->
+  <text x="84" y="59" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#64748b" letter-spacing="1.2">
+    DIGITAL BUSINESS SUITE
+  </text>
+
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .ww-text { fill: #f8fafc; }
+    }
+  </style>
+</svg>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Coffee, Shield, KeyRound, ArrowLeft, Check, Delete, Lock, UserCheck, Keyboard } from 'lucide-react';
+import { Coffee, Shield, KeyRound, ArrowLeft, Check, Delete, Lock, UserCheck, Keyboard, LogOut } from 'lucide-react';
 
 export default function LoginModal({
   isOpen,
@@ -7,7 +7,8 @@ export default function LoginModal({
   onLoginSuccess,
   storeName,
   canClose = false,
-  onClose
+  onClose,
+  onLogoutKafe
 }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [pinInput, setPinInput] = useState('');
@@ -171,6 +172,18 @@ export default function LoginModal({
                 Kasir (Budi / Siti): <code className="font-mono font-bold">1234</code><br />
                 Admin: <code className="font-mono font-bold">1234</code> • Owner: <code className="font-mono font-bold">123456</code>
               </div>
+              {onLogoutKafe && (
+                <div className="pt-2 border-t border-stone-200/80">
+                  <button
+                    type="button"
+                    onClick={onLogoutKafe}
+                    className="w-full py-2.5 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-rose-200"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Keluar dari Kafe (Ganti ID Kafe)</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             /* STEP 2: KEYPAD PIN */

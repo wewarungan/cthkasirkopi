@@ -185,10 +185,6 @@ export default function LoginModal({
                 ))}
               </div>
 
-              <div className="p-3 bg-amber-50/70 border border-amber-200/60 rounded-2xl text-[11px] text-amber-900 text-center">
-                <span className="font-bold">💡 PIN Standar:</span><br />
-                Kasir / Admin: <code className="font-mono font-bold bg-amber-100/80 px-1 rounded">1234</code> • Owner: <code className="font-mono font-bold bg-amber-100/80 px-1 rounded">123456</code>
-              </div>
 
               {onLogoutKafe && (
                 <div className="pt-2 border-t border-stone-200/80">

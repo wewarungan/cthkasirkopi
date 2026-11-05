@@ -234,7 +234,7 @@ export default function LoginModal({
                 </div>
               </div>
 
-              {/* PIN Input Box & Visually Clear Dots */}
+              {/* PIN Input Box (Hanya 1 input bersih & modern) */}
               <div className="flex flex-col items-center justify-center space-y-2">
                 <div className="relative flex items-center justify-center">
                   <input
@@ -253,34 +253,17 @@ export default function LoginModal({
                       }
                     }}
                     placeholder={Array.from({ length: selectedUser.pin ? selectedUser.pin.length : 4 }).map(() => '•').join(' ')}
-                    className="w-52 text-center py-2 px-3 text-2xl tracking-[0.35em] font-mono font-black bg-white border-2 border-stone-300 focus:border-[#5c3a21] rounded-2xl focus:outline-none shadow-inner transition-all text-[#5c3a21]"
+                    className="w-52 text-center py-2.5 px-4 pr-10 text-2xl tracking-[0.35em] font-mono font-black bg-white border-2 border-stone-300 focus:border-[#5c3a21] rounded-2xl focus:outline-none shadow-xs transition-all text-[#5c3a21]"
                   />
                   
                   <button
                     type="button"
                     onClick={() => setShowPinText(!showPinText)}
-                    className="absolute right-3 text-stone-400 hover:text-stone-700 p-1"
+                    className="absolute right-3 text-stone-400 hover:text-stone-700 p-1.5 transition-colors cursor-pointer"
                     title={showPinText ? "Sembunyikan PIN" : "Tampilkan PIN"}
                   >
                     {showPinText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
-                </div>
-
-                {/* Indikator Titik PIN Terisi */}
-                <div className="flex justify-center items-center gap-2 pt-0.5">
-                  {Array.from({ length: selectedUser.pin ? selectedUser.pin.length : 4 }).map((_, idx) => {
-                    const isFilled = idx < pinInput.length;
-                    return (
-                      <div
-                        key={idx}
-                        className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                          isFilled 
-                            ? 'bg-[#5c3a21] scale-110 shadow-xs' 
-                            : 'bg-stone-300'
-                        }`}
-                      />
-                    );
-                  })}
                 </div>
 
                 <p className="text-[10px] text-stone-400 flex items-center gap-1">
